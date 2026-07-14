@@ -1,0 +1,6 @@
+{
+  "name": "New Juaben Council of Chiefs (Nkosuo Division)",
+  "description": "Official showcase website of the New Juaben Council of Chiefs (Nkosuo Division), highlighting developmental projects, royal biographies, community gallery, and feedback portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
