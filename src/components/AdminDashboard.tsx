@@ -45,6 +45,7 @@ import { Project, Event as RoyalEvent, GalleryItem, FeedbackSubmission, ProjectC
 import { COMMUNITIES_DATA, DEFAULT_CONTACT_INFO } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 import VideoPlayer from './VideoPlayer';
+import { supabaseService } from '../lib/supabase';
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -88,6 +89,8 @@ interface AdminDashboardProps {
   setAdvisoryBoard?: (val: AdvisoryBoardMember[]) => void;
   contacts?: ContactInfo;
   setContacts?: (val: ContactInfo) => void;
+  isDbLoading?: boolean;
+  supabaseStatus?: 'not_configured' | 'connected' | 'error';
 }
 
 const IMAGE_PRESETS = {
@@ -159,7 +162,9 @@ export default function AdminDashboard({
   advisoryBoard,
   setAdvisoryBoard,
   contacts: propContacts,
-  setContacts: propSetContacts
+  setContacts: propSetContacts,
+  isDbLoading,
+  supabaseStatus
 }: AdminDashboardProps) {
   const [internalAdvisoryBoard, setInternalAdvisoryBoard] = useState<AdvisoryBoardMember[]>([]);
   const advisoryMembers = advisoryBoard !== undefined ? advisoryBoard : internalAdvisoryBoard;
@@ -193,6 +198,7 @@ export default function AdminDashboard({
   // Draft upload states for cancelable uploads
   const [logoDraft, setLogoDraft] = useState<string | null>(null);
   const [heroBgDraft, setHeroBgDraft] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   // Form states for texts
   const [formLogoText, setFormLogoText] = useState(logoText);
@@ -1058,6 +1064,8 @@ export default function AdminDashboard({
         )}
       </AnimatePresence>
 
+
+
       {/* Custom Administrative Confirmation overlay */}
       <AnimatePresence>
         {confirmDialog && (
@@ -1645,13 +1653,21 @@ export default function AdminDashboard({
                           if (files && files.length > 0) {
                             const file = files[0];
                             if (file.type.startsWith('image/')) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
-                                  setProjectForm(prev => ({ ...prev, image: event.target!.result as string }));
+                            setUploadProgress("Uploading project picture to Supabase storage...");
+                            supabaseService.uploadFile(file, 'projects').then((url) => {
+                              setUploadProgress(null);
+                              if (url) {
+                                  setProjectForm(prev => ({ ...prev, image: url }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload project picture to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }
                         }}
@@ -1670,13 +1686,21 @@ export default function AdminDashboard({
                             const files = e.target.files;
                             if (files && files.length > 0) {
                               const file = files[0];
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
-                                  setProjectForm(prev => ({ ...prev, image: event.target!.result as string }));
+                              setUploadProgress("Uploading project picture to Supabase storage...");
+                              supabaseService.uploadFile(file, 'projects').then((url) => {
+                                setUploadProgress(null);
+                                if (url) {
+                                  setProjectForm(prev => ({ ...prev, image: url }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload project picture to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }}
                         />
@@ -1685,11 +1709,11 @@ export default function AdminDashboard({
                           Drag & drop or click to upload picture
                         </span>
                       </div>
-                      {projectForm.image && projectForm.image.startsWith('data:image/') && (
+                      {projectForm.image && (
                         <div className="mt-2 flex items-center space-x-2 bg-neutral-950 p-2 rounded border border-neutral-800">
                           <img src={projectForm.image} alt="Uploaded preview" className="w-8 h-8 rounded object-cover border border-neutral-700" />
                           <span className="text-[9px] font-mono text-neutral-400 truncate flex-1">
-                            Uploaded from device (base64)
+                            {projectForm.image.startsWith('data:') ? 'Local file (base64)' : 'Synced with Supabase Storage'}
                           </span>
                           <button
                             type="button"
@@ -1718,119 +1742,29 @@ export default function AdminDashboard({
                     </div>
                   </div>
 
-                  {/* Video Attachment (YouTube or Local File) */}
+                  {/* Video Attachment (YouTube) */}
                   <div className="border-t border-neutral-800/80 pt-5 mt-5 space-y-4">
                     <div>
                       <h4 className="text-xs font-sans font-black text-[#D4AF37] uppercase tracking-wider mb-1">
                         Video Presentation (Optional)
                       </h4>
                       <p className="text-[11px] text-neutral-400">
-                        Add a project video showcase either by pasting a YouTube URL or uploading a video file from your device.
+                        Add a project video showcase by pasting a YouTube URL.
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Video Type selector */}
-                      <div>
-                        <label className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
-                          Video Source Type
-                        </label>
-                        <div className="flex bg-neutral-950 border border-neutral-800 rounded-lg p-1">
-                          <button
-                            type="button"
-                            onClick={() => setProjectForm(prev => ({ ...prev, videoType: 'youtube' }))}
-                            className={`flex-1 py-1.5 text-[10px] font-sans font-black uppercase tracking-wider rounded transition-all cursor-pointer ${
-                              projectForm.videoType === 'youtube'
-                                ? 'bg-[#990000] text-white'
-                                : 'text-neutral-400 hover:text-white'
-                            }`}
-                          >
-                            YouTube URL
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setProjectForm(prev => ({ ...prev, videoType: 'local' }))}
-                            className={`flex-1 py-1.5 text-[10px] font-sans font-black uppercase tracking-wider rounded transition-all cursor-pointer ${
-                              projectForm.videoType === 'local'
-                                ? 'bg-[#990000] text-white'
-                                : 'text-neutral-400 hover:text-white'
-                            }`}
-                          >
-                            Device Upload
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* YouTube Input or Device Upload Input depending on selection */}
-                      {projectForm.videoType === 'youtube' ? (
-                        <div>
-                          <label htmlFor="project-video-url" className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
-                            YouTube Video URL
-                          </label>
-                          <input
-                            id="project-video-url"
-                            type="text"
-                            value={projectForm.videoUrl || ''}
-                            onChange={(e) => setProjectForm(prev => ({ ...prev, videoUrl: e.target.value }))}
-                            placeholder="e.g. https://www.youtube.com/watch?v=..."
-                            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#D4AF37]"
-                          />
-                        </div>
-                      ) : (
-                        <div>
-                          <label className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
-                            Upload Video File (MP4, WebM)
-                          </label>
-                          <div
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              const files = e.dataTransfer.files;
-                              if (files && files.length > 0) {
-                                const file = files[0];
-                                if (file.type.startsWith('video/')) {
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    if (event.target?.result) {
-                                      setProjectForm(prev => ({ ...prev, videoUrl: event.target!.result as string }));
-                                    }
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }
-                            }}
-                            onClick={() => {
-                              const input = document.getElementById('project-device-video-input');
-                              if (input) (input as HTMLInputElement).click();
-                            }}
-                            className="border border-dashed border-neutral-800 hover:border-[#D4AF37] hover:bg-neutral-950/30 rounded-lg p-2.5 text-center cursor-pointer transition-all flex items-center justify-center space-x-2"
-                          >
-                            <input
-                              id="project-device-video-input"
-                              type="file"
-                              accept="video/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const files = e.target.files;
-                                if (files && files.length > 0) {
-                                  const file = files[0];
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    if (event.target?.result) {
-                                      setProjectForm(prev => ({ ...prev, videoUrl: event.target!.result as string }));
-                                    }
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                            />
-                            <VideoIcon className="w-4 h-4 text-neutral-500" />
-                            <span className="text-[10px] text-neutral-400 font-sans">
-                              Drag & drop or click to upload video
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                    <div>
+                      <label htmlFor="project-video-url" className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
+                        YouTube Video URL
+                      </label>
+                      <input
+                        id="project-video-url"
+                        type="text"
+                        value={projectForm.videoUrl || ''}
+                        onChange={(e) => setProjectForm(prev => ({ ...prev, videoUrl: e.target.value, videoType: 'youtube' }))}
+                        placeholder="e.g. https://www.youtube.com/watch?v=..."
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#D4AF37]"
+                      />
                     </div>
 
                     {/* Video Attachment Preview / Remove control */}
@@ -1839,7 +1773,7 @@ export default function AdminDashboard({
                         <div className="w-full h-44 bg-neutral-950 border border-neutral-800 rounded-lg overflow-hidden relative">
                           <VideoPlayer
                             videoUrl={projectForm.videoUrl}
-                            videoType={projectForm.videoType}
+                            videoType="youtube"
                             thumbnailUrl={projectForm.image}
                             title={projectForm.title || 'Project Video Preview'}
                           />
@@ -1848,7 +1782,7 @@ export default function AdminDashboard({
                           <div className="flex items-center space-x-3 truncate">
                             <Film className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
                             <span className="text-[10px] font-mono text-neutral-400 truncate">
-                              {projectForm.videoUrl.startsWith('data:') ? 'Attached video from device' : projectForm.videoUrl}
+                              {projectForm.videoUrl}
                             </span>
                           </div>
                           <button
@@ -2110,13 +2044,21 @@ export default function AdminDashboard({
                           if (files && files.length > 0) {
                             const file = files[0];
                             if (file.type.startsWith('image/')) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
-                                  setEventForm(prev => ({ ...prev, imageUrl: event.target!.result as string }));
+                              setUploadProgress("Uploading event banner to Supabase storage...");
+                              supabaseService.uploadFile(file, 'events').then((url) => {
+                                setUploadProgress(null);
+                                if (url) {
+                                  setEventForm(prev => ({ ...prev, imageUrl: url }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload event banner to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }
                         }}
@@ -2135,13 +2077,21 @@ export default function AdminDashboard({
                             const files = e.target.files;
                             if (files && files.length > 0) {
                               const file = files[0];
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
-                                  setEventForm(prev => ({ ...prev, imageUrl: event.target!.result as string }));
+                              setUploadProgress("Uploading event banner to Supabase storage...");
+                              supabaseService.uploadFile(file, 'events').then((url) => {
+                                setUploadProgress(null);
+                                if (url) {
+                                  setEventForm(prev => ({ ...prev, imageUrl: url }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload event banner to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }}
                         />
@@ -2150,11 +2100,11 @@ export default function AdminDashboard({
                           Drag & drop or click to upload banner
                         </span>
                       </div>
-                      {eventForm.imageUrl && eventForm.imageUrl.startsWith('data:image/') && (
+                      {eventForm.imageUrl && (
                         <div className="mt-2 flex items-center space-x-2 bg-neutral-950 p-2 rounded border border-neutral-800">
                           <img src={eventForm.imageUrl} alt="Uploaded preview" className="w-8 h-8 rounded object-cover border border-neutral-700" />
                           <span className="text-[9px] font-mono text-neutral-400 truncate flex-1">
-                            Uploaded from device (base64)
+                            {eventForm.imageUrl.startsWith('data:') ? 'Local file (base64)' : 'Synced with Supabase Storage'}
                           </span>
                           <button
                             type="button"
@@ -2183,119 +2133,29 @@ export default function AdminDashboard({
                     </div>
                   </div>
 
-                  {/* Event Video Attachment (YouTube or Local File) */}
+                  {/* Event Video Attachment (YouTube) */}
                   <div className="border-t border-neutral-800/80 pt-5 mt-5 space-y-4">
                     <div>
                       <h4 className="text-xs font-sans font-black text-[#D4AF37] uppercase tracking-wider mb-1">
                         Video Presentation (Optional)
                       </h4>
                       <p className="text-[11px] text-neutral-400">
-                        Add an event video showcase either by pasting a YouTube URL or uploading a video file from your device.
+                        Add an event video showcase by pasting a YouTube URL.
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Video Type selector */}
-                      <div>
-                        <label className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
-                          Video Source Type
-                        </label>
-                        <div className="flex bg-neutral-950 border border-neutral-800 rounded-lg p-1">
-                          <button
-                            type="button"
-                            onClick={() => setEventForm(prev => ({ ...prev, videoType: 'youtube' }))}
-                            className={`flex-1 py-1.5 text-[10px] font-sans font-black uppercase tracking-wider rounded transition-all cursor-pointer ${
-                              eventForm.videoType === 'youtube'
-                                ? 'bg-[#990000] text-white'
-                                : 'text-neutral-400 hover:text-white'
-                            }`}
-                          >
-                            YouTube URL
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEventForm(prev => ({ ...prev, videoType: 'local' }))}
-                            className={`flex-1 py-1.5 text-[10px] font-sans font-black uppercase tracking-wider rounded transition-all cursor-pointer ${
-                              eventForm.videoType === 'local'
-                                ? 'bg-[#990000] text-white'
-                                : 'text-neutral-400 hover:text-white'
-                            }`}
-                          >
-                            Device Upload
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* YouTube Input or Device Upload Input depending on selection */}
-                      {eventForm.videoType === 'youtube' ? (
-                        <div>
-                          <label htmlFor="event-video-url" className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
-                            YouTube Video URL
-                          </label>
-                          <input
-                            id="event-video-url"
-                            type="text"
-                            value={eventForm.videoUrl || ''}
-                            onChange={(e) => setEventForm(prev => ({ ...prev, videoUrl: e.target.value }))}
-                            placeholder="e.g. https://www.youtube.com/watch?v=..."
-                            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#D4AF37]"
-                          />
-                        </div>
-                      ) : (
-                        <div>
-                          <label className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
-                            Upload Video File (MP4, WebM)
-                          </label>
-                          <div
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              const files = e.dataTransfer.files;
-                              if (files && files.length > 0) {
-                                const file = files[0];
-                                if (file.type.startsWith('video/')) {
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    if (event.target?.result) {
-                                      setEventForm(prev => ({ ...prev, videoUrl: event.target!.result as string }));
-                                    }
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }
-                            }}
-                            onClick={() => {
-                              const input = document.getElementById('event-device-video-input');
-                              if (input) (input as HTMLInputElement).click();
-                            }}
-                            className="border border-dashed border-neutral-800 hover:border-[#D4AF37] hover:bg-neutral-950/30 rounded-lg p-2.5 text-center cursor-pointer transition-all flex items-center justify-center space-x-2"
-                          >
-                            <input
-                              id="event-device-video-input"
-                              type="file"
-                              accept="video/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const files = e.target.files;
-                                if (files && files.length > 0) {
-                                  const file = files[0];
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    if (event.target?.result) {
-                                      setEventForm(prev => ({ ...prev, videoUrl: event.target!.result as string }));
-                                    }
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                            />
-                            <VideoIcon className="w-4 h-4 text-neutral-500" />
-                            <span className="text-[10px] text-neutral-400 font-sans">
-                              Drag & drop or click to upload video
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                    <div>
+                      <label htmlFor="event-video-url" className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
+                        YouTube Video URL
+                      </label>
+                      <input
+                        id="event-video-url"
+                        type="text"
+                        value={eventForm.videoUrl || ''}
+                        onChange={(e) => setEventForm(prev => ({ ...prev, videoUrl: e.target.value, videoType: 'youtube' }))}
+                        placeholder="e.g. https://www.youtube.com/watch?v=..."
+                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#D4AF37]"
+                      />
                     </div>
 
                     {/* Video Attachment Preview / Remove control */}
@@ -2304,7 +2164,7 @@ export default function AdminDashboard({
                         <div className="w-full h-44 bg-neutral-950 border border-neutral-800 rounded-lg overflow-hidden relative">
                           <VideoPlayer
                             videoUrl={eventForm.videoUrl}
-                            videoType={eventForm.videoType}
+                            videoType="youtube"
                             thumbnailUrl={eventForm.imageUrl}
                             title={eventForm.title || 'Event Video Preview'}
                           />
@@ -2313,7 +2173,7 @@ export default function AdminDashboard({
                           <div className="flex items-center space-x-3 truncate">
                             <Film className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
                             <span className="text-[10px] font-mono text-neutral-400 truncate">
-                              {eventForm.videoUrl.startsWith('data:') ? 'Attached video from device' : eventForm.videoUrl}
+                              {eventForm.videoUrl}
                             </span>
                           </div>
                           <button
@@ -2497,13 +2357,21 @@ export default function AdminDashboard({
                           if (files && files.length > 0) {
                             const file = files[0];
                             if (file.type.startsWith('image/')) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
-                                  setGalleryForm(prev => ({ ...prev, imageUrl: event.target!.result as string }));
+                              setUploadProgress("Uploading snapshot to Supabase storage...");
+                              supabaseService.uploadFile(file, 'gallery').then((url) => {
+                                setUploadProgress(null);
+                                if (url) {
+                                  setGalleryForm(prev => ({ ...prev, imageUrl: url }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload snapshot to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }
                         }}
@@ -2522,13 +2390,21 @@ export default function AdminDashboard({
                             const files = e.target.files;
                             if (files && files.length > 0) {
                               const file = files[0];
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
-                                  setGalleryForm(prev => ({ ...prev, imageUrl: event.target!.result as string }));
+                              setUploadProgress("Uploading snapshot to Supabase storage...");
+                              supabaseService.uploadFile(file, 'gallery').then((url) => {
+                                setUploadProgress(null);
+                                if (url) {
+                                  setGalleryForm(prev => ({ ...prev, imageUrl: url }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload snapshot to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }}
                         />
@@ -2537,11 +2413,11 @@ export default function AdminDashboard({
                           Drag & drop or click to upload snapshot
                         </span>
                       </div>
-                      {galleryForm.imageUrl && galleryForm.imageUrl.startsWith('data:image/') && (
+                      {galleryForm.imageUrl && (
                         <div className="mt-2 flex items-center space-x-2 bg-neutral-950 p-2 rounded border border-neutral-800">
                           <img src={galleryForm.imageUrl} alt="Uploaded preview" className="w-8 h-8 rounded object-cover border border-neutral-700" />
                           <span className="text-[9px] font-mono text-neutral-400 truncate flex-1">
-                            Uploaded from device (base64)
+                            {galleryForm.imageUrl.startsWith('data:') ? 'Local file (base64)' : 'Synced with Supabase Storage'}
                           </span>
                           <button
                             type="button"
@@ -3060,13 +2936,22 @@ export default function AdminDashboard({
                             onChange={(e) => {
                               const files = e.target.files;
                               if (files && files.length > 0) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  if (event.target?.result) {
-                                    setLogoDraft(event.target.result as string);
+                                const file = files[0];
+                                setUploadProgress("Uploading your custom logo to Supabase storage...");
+                                supabaseService.uploadFile(file, 'logos').then((url) => {
+                                  setUploadProgress(null);
+                                  if (url) {
+                                    setLogoDraft(url);
+                                    setSuccessMessage("successfully updated");
+                                    setTimeout(() => setSuccessMessage(''), 4000);
+                                  } else {
+                                    setSuccessMessage("Failed to upload logo to Supabase Storage. Please try again.");
+                                    setTimeout(() => setSuccessMessage(''), 4000);
                                   }
-                                };
-                                reader.readAsDataURL(files[0]);
+                                }).catch((err) => {
+                                  setUploadProgress(null);
+                                  console.error(err);
+                                });
                               }
                             }}
                             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -3371,13 +3256,21 @@ export default function AdminDashboard({
                         if (files && files.length > 0) {
                           const file = files[0];
                           if (file.type.startsWith('image/')) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              if (event.target?.result) {
-                                setHeroBgDraft(event.target.result as string);
+                            setUploadProgress("Uploading hero background to Supabase storage...");
+                            supabaseService.uploadFile(file, 'hero').then((url) => {
+                              setUploadProgress(null);
+                              if (url) {
+                                setHeroBgDraft(url);
+                                setSuccessMessage("successfully updated");
+                                setTimeout(() => setSuccessMessage(''), 4000);
+                              } else {
+                                setSuccessMessage("Failed to upload background image to Supabase Storage.");
+                                setTimeout(() => setSuccessMessage(''), 4000);
                               }
-                            };
-                            reader.readAsDataURL(file);
+                            }).catch((err) => {
+                              setUploadProgress(null);
+                              console.error(err);
+                            });
                           }
                         }
                       }}
@@ -3396,13 +3289,21 @@ export default function AdminDashboard({
                           const files = e.target.files;
                           if (files && files.length > 0) {
                             const file = files[0];
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              if (event.target?.result) {
-                                setHeroBgDraft(event.target.result as string);
+                            setUploadProgress("Uploading hero background to Supabase storage...");
+                            supabaseService.uploadFile(file, 'hero').then((url) => {
+                              setUploadProgress(null);
+                              if (url) {
+                                setHeroBgDraft(url);
+                                setSuccessMessage("successfully updated");
+                                setTimeout(() => setSuccessMessage(''), 4000);
+                              } else {
+                                setSuccessMessage("Failed to upload background image to Supabase Storage.");
+                                setTimeout(() => setSuccessMessage(''), 4000);
                               }
-                            };
-                            reader.readAsDataURL(file);
+                            }).catch((err) => {
+                              setUploadProgress(null);
+                              console.error(err);
+                            });
                           }
                         }}
                       />
@@ -3669,13 +3570,22 @@ export default function AdminDashboard({
                           onChange={(e) => {
                             const files = e.target.files;
                             if (files && files.length > 0) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
-                                  setLeadersForm(prev => ({ ...prev, avatarUrl: event.target!.result as string }));
+                              const file = files[0];
+                              setUploadProgress("Uploading portrait photo to Supabase storage...");
+                              supabaseService.uploadFile(file, 'leaders').then((url) => {
+                                setUploadProgress(null);
+                                if (url) {
+                                  setLeadersForm(prev => ({ ...prev, avatarUrl: url }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload portrait to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(files[0]);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }}
                           className="absolute inset-0 opacity-0 cursor-pointer"
@@ -3929,19 +3839,28 @@ export default function AdminDashboard({
                           onChange={(e) => {
                             const files = e.target.files;
                             if (files && files.length > 0) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
+                              const file = files[0];
+                              setUploadProgress("Uploading chief portrait to Supabase storage...");
+                              supabaseService.uploadFile(file, 'chiefs').then((url) => {
+                                setUploadProgress(null);
+                                if (url) {
                                   setCommunityForm(prev => ({
                                     ...prev,
                                     chiefProfile: {
                                       ...prev.chiefProfile,
-                                      avatarUrl: event.target!.result as string
+                                      avatarUrl: url
                                     }
                                   }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload chief portrait to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(files[0]);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }}
                           className="absolute inset-0 opacity-0 cursor-pointer"
@@ -4126,19 +4045,28 @@ export default function AdminDashboard({
                           onChange={(e) => {
                             const files = e.target.files;
                             if (files && files.length > 0) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                if (event.target?.result) {
+                              const file = files[0];
+                              setUploadProgress("Uploading queen portrait to Supabase storage...");
+                              supabaseService.uploadFile(file, 'queens').then((url) => {
+                                setUploadProgress(null);
+                                if (url) {
                                   setCommunityForm(prev => ({
                                     ...prev,
                                     queenProfile: {
                                       ...prev.queenProfile,
-                                      avatarUrl: event.target!.result as string
+                                      avatarUrl: url
                                     }
                                   }));
+                                  setSuccessMessage("successfully updated");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
+                                } else {
+                                  setSuccessMessage("Failed to upload queen portrait to Supabase.");
+                                  setTimeout(() => setSuccessMessage(''), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(files[0]);
+                              }).catch((err) => {
+                                setUploadProgress(null);
+                                console.error(err);
+                              });
                             }
                           }}
                           className="absolute inset-0 opacity-0 cursor-pointer"
@@ -4412,7 +4340,7 @@ export default function AdminDashboard({
                     {/* Image URL with Preset Options */}
                     <div>
                       <label className="block text-[10px] font-sans font-black text-neutral-400 uppercase tracking-wider mb-2">
-                        Portrait Image URL
+                        Portrait Image URL / Upload
                       </label>
                       <div className="space-y-3">
                         <input
@@ -4422,6 +4350,39 @@ export default function AdminDashboard({
                           placeholder="https://images.unsplash.com/..."
                           className="w-full bg-neutral-950 border border-neutral-800 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] rounded-xl px-4 py-3 text-xs text-white placeholder-neutral-600 transition-all focus:outline-none"
                         />
+                        
+                        <div>
+                          <label className="block text-[9px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">
+                            Or Upload Portrait from Device
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files && files.length > 0) {
+                                const file = files[0];
+                                setUploadProgress("Uploading advisory portrait to Supabase storage...");
+                                supabaseService.uploadFile(file, 'advisory').then((url) => {
+                                  setUploadProgress(null);
+                                  if (url) {
+                                    setAdvisoryForm(prev => ({ ...prev, imageUrl: url }));
+                                    setSuccessMessage("successfully updated");
+                                    setTimeout(() => setSuccessMessage(''), 4000);
+                                  } else {
+                                    setSuccessMessage("Failed to upload portrait to Supabase.");
+                                    setTimeout(() => setSuccessMessage(''), 4000);
+                                  }
+                                }).catch((err) => {
+                                  setUploadProgress(null);
+                                  console.error(err);
+                                });
+                              }
+                            }}
+                            className="block w-full text-xs text-neutral-400 bg-neutral-950 border border-neutral-800 hover:border-[#D4AF37] rounded-lg px-3 py-2 cursor-pointer focus:outline-none file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-sans file:font-black file:uppercase file:bg-neutral-800 file:text-neutral-300 hover:file:bg-neutral-700"
+                          />
+                        </div>
+
                         <div className="flex flex-wrap gap-2 pt-1">
                           <button
                             type="button"

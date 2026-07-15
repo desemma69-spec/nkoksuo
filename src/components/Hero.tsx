@@ -35,7 +35,7 @@ export default function Hero({
   const activeStats = heroStats || defaultStats;
 
   // We refer to our background image
-  const heroImgUrl = heroBgUrl || "/src/assets/images/omanhene_hero_bg_1783513909221.jpg";
+  const heroImgUrl = heroBgUrl || "/src/assets/images/new_juaben_council_chiefs_hero_1783507779624.jpg";
 
   return (
     <section
@@ -43,12 +43,16 @@ export default function Hero({
       className="relative min-h-screen flex flex-col justify-center bg-[#0a0a0a] pt-24 overflow-hidden"
     >
       {/* Background Hero Image with Deep Regal Overlays */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute top-[72px] lg:top-[96px] xl:top-[132px] bottom-0 left-0 right-0 z-0">
         <img
           src={heroImgUrl}
           alt="Nkosuo Division New Juaben Traditional Area sitting in state"
-          className="w-full h-full object-cover opacity-65 scale-100 transition-all duration-700 brightness-[0.85] contrast-[1.25] saturate-[1.15]"
-          style={{ objectPosition: heroBgPosition || 'center 20%' }}
+          className="w-full h-full object-cover opacity-65 scale-100 transition-all duration-700"
+          style={{ 
+            objectPosition: heroBgPosition || 'center 15%',
+            filter: 'brightness(0.9) contrast(1.15) saturate(1.1)',
+            imageRendering: '-webkit-optimize-contrast'
+          }}
           referrerPolicy="no-referrer"
         />
         {/* Deep Black and Rich Red Radial Gradients to Balance Bright/Deep Colors */}

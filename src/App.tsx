@@ -22,6 +22,8 @@ import Contacts from './components/Contacts';
 // Schema and datasets
 import { PROJECTS_DATA, EVENTS_DATA, GALLERY_ITEMS, COMMUNITIES_DATA, DEFAULT_LEADERS, INITIAL_FEEDBACK, ADINKRA_PROVERBS, DEFAULT_ADVISORY_BOARD, DEFAULT_CONTACT_INFO } from './data';
 import { Project, Event as RoyalEvent, GalleryItem, TraditionalLeader, FeedbackSubmission, AdinkraProverb, AdvisoryBoardMember, ContactInfo } from './types';
+import { isSupabaseConfigured, supabaseService, supabase } from './lib/supabase';
+
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('hero');
@@ -80,11 +82,15 @@ export default function App() {
   };
 
   // Global state pools
+  const [isDbLoading, setIsDbLoading] = useState<boolean>(false);
+  const [supabaseStatus, setSupabaseStatus] = useState<'not_configured' | 'connected' | 'error'>('not_configured');
+
   const [projects, setProjects] = useState<Project[]>([]);
+
   const [events, setEvents] = useState<RoyalEvent[]>([]);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [adinkraProverbs, setAdinkraProverbs] = useState<AdinkraProverb[]>([]);
-  const [heroBgUrl, setHeroBgUrl] = useState<string>('');
+  const [heroBgUrl, setHeroBgUrl] = useState<string>('/src/assets/images/new_juaben_council_chiefs_hero_1783507779624.jpg');
   const [heroBgPosition, setHeroBgPosition] = useState<string>('center 5%');
   const [communities, setCommunities] = useState<any[]>([]);
   const [traditionalLeaders, setTraditionalLeaders] = useState<TraditionalLeader[]>([]);
@@ -181,288 +187,397 @@ export default function App() {
     });
   }, [heroStats, projects, communities]);
 
-  // Hydrate states from localStorage with robust raw static fallbacks
+  // Hydrate states from Supabase or localStorage with robust fallbacks
   useEffect(() => {
-    // Logo & Migration for name change
-    const savedLogoText = localStorage.getItem('new_juaben_logo_text');
-    if (!savedLogoText || savedLogoText === 'New Juaben Council of Chiefs') {
-      localStorage.setItem('new_juaben_logo_text', 'Nkosuo Division New Juaben Traditional Area');
-      setLogoText('Nkosuo Division New Juaben Traditional Area');
-    } else {
-      setLogoText(savedLogoText);
-    }
-
-    const savedLogoSubtext = localStorage.getItem('new_juaben_logo_subtext');
-    if (!savedLogoSubtext || savedLogoSubtext === 'Nkosuo Division • Development Portfolio') {
-      localStorage.setItem('new_juaben_logo_subtext', 'Development & Cultural Legacy');
-      setLogoSubtext('Development & Cultural Legacy');
-    } else {
-      setLogoSubtext(savedLogoSubtext);
-    }
-
-    const savedLogoImgUrl = localStorage.getItem('new_juaben_logo_img_url');
-    if (savedLogoImgUrl && savedLogoImgUrl !== '') {
-      setLogoImgUrl(savedLogoImgUrl);
-    } else {
-      const defaultLogo = "/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg";
-      setLogoImgUrl(defaultLogo);
-      localStorage.setItem('new_juaben_logo_img_url', defaultLogo);
-    }
-
-    // Hero Text Migration
-    const savedHeroTitle1 = localStorage.getItem('new_juaben_hero_title1');
-    if (!savedHeroTitle1 || savedHeroTitle1 === 'New Juaben') {
-      localStorage.setItem('new_juaben_hero_title1', 'Nkosuo Division');
-      setHeroTitle1('Nkosuo Division');
-    } else {
-      setHeroTitle1(savedHeroTitle1);
-    }
-
-    const savedHeroTitle2 = localStorage.getItem('new_juaben_hero_title2');
-    if (!savedHeroTitle2 || savedHeroTitle2 === 'Council of Chiefs') {
-      localStorage.setItem('new_juaben_hero_title2', 'New Juaben Traditional Area');
-      setHeroTitle2('New Juaben Traditional Area');
-    } else {
-      setHeroTitle2(savedHeroTitle2);
-    }
-
-    const savedHeroSubBadge = localStorage.getItem('new_juaben_hero_subbadge');
-    if (!savedHeroSubBadge || savedHeroSubBadge === 'Nkosuo Division (Development)') {
-      localStorage.setItem('new_juaben_hero_subbadge', 'Modernization & Royal Heritage');
-      setHeroSubBadge('Modernization & Royal Heritage');
-    } else {
-      setHeroSubBadge(savedHeroSubBadge);
-    }
-
-    const savedHeroDesc = localStorage.getItem('new_juaben_hero_desc');
-    if (!savedHeroDesc || savedHeroDesc.includes('Led by the vision of the Council of Chiefs')) {
-      const newDesc = 'Led by the vision of the Omanhene, the Nkosuo (Development) Division drives rapid modernization, funding primary healthcare, building modern schools, launching agricultural cooperatives, and empowering the youth of New Juaben Traditional Area while preserving our royal ancestral legacy.';
-      localStorage.setItem('new_juaben_hero_desc', newDesc);
-      setHeroDesc(newDesc);
-    } else {
-      setHeroDesc(savedHeroDesc);
-    }
-
-    // Hero Stats
-    const savedHeroStats = localStorage.getItem('new_juaben_hero_stats');
-    if (savedHeroStats) {
-      try {
-        const parsed = JSON.parse(savedHeroStats);
-        if (Array.isArray(parsed)) {
-          const updated = parsed.map((stat: any) => {
-            if (stat && stat.label === "Divisional Communities" && stat.value === "7") {
-              return { ...stat, value: "8" };
-            }
-            return stat;
-          });
-          setHeroStats(updated);
-          localStorage.setItem('new_juaben_hero_stats', JSON.stringify(updated));
-        }
-      } catch (e) {
-        // use default
+    function loadLocalFallback() {
+      // Logo & Migration for name change
+      const savedLogoText = localStorage.getItem('new_juaben_logo_text');
+      if (!savedLogoText || savedLogoText === 'New Juaben Council of Chiefs') {
+        localStorage.setItem('new_juaben_logo_text', 'Nkosuo Division New Juaben Traditional Area');
+        setLogoText('Nkosuo Division New Juaben Traditional Area');
+      } else {
+        setLogoText(savedLogoText);
       }
-    }
 
-    // Communities Data
-    const savedCommunities = localStorage.getItem('new_juaben_communities_data');
-    if (savedCommunities) {
-      try {
-        const parsed = JSON.parse(savedCommunities);
-        const hasSouth = Array.isArray(parsed) && parsed.some((c: any) => c && c.id === 'new_juaben_south');
-        if (!Array.isArray(parsed) || !hasSouth || parsed.length < COMMUNITIES_DATA.length) {
+      const savedLogoSubtext = localStorage.getItem('new_juaben_logo_subtext');
+      if (!savedLogoSubtext || savedLogoSubtext === 'Nkosuo Division • Development Portfolio') {
+        localStorage.setItem('new_juaben_logo_subtext', 'Development & Cultural Legacy');
+        setLogoSubtext('Development & Cultural Legacy');
+      } else {
+        setLogoSubtext(savedLogoSubtext);
+      }
+
+      const savedLogoImgUrl = localStorage.getItem('new_juaben_logo_img_url');
+      if (savedLogoImgUrl && savedLogoImgUrl !== '') {
+        setLogoImgUrl(savedLogoImgUrl);
+      } else {
+        const defaultLogo = "/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg";
+        setLogoImgUrl(defaultLogo);
+        localStorage.setItem('new_juaben_logo_img_url', defaultLogo);
+      }
+
+      // Hero Text Migration
+      const savedHeroTitle1 = localStorage.getItem('new_juaben_hero_title1');
+      if (!savedHeroTitle1 || savedHeroTitle1 === 'New Juaben') {
+        localStorage.setItem('new_juaben_hero_title1', 'Nkosuo Division');
+        setHeroTitle1('Nkosuo Division');
+      } else {
+        setHeroTitle1(savedHeroTitle1);
+      }
+
+      const savedHeroTitle2 = localStorage.getItem('new_juaben_hero_title2');
+      if (!savedHeroTitle2 || savedHeroTitle2 === 'Council of Chiefs') {
+        localStorage.setItem('new_juaben_hero_title2', 'New Juaben Traditional Area');
+        setHeroTitle2('New Juaben Traditional Area');
+      } else {
+        setHeroTitle2(savedHeroTitle2);
+      }
+
+      const savedHeroSubBadge = localStorage.getItem('new_juaben_hero_subbadge');
+      if (!savedHeroSubBadge || savedHeroSubBadge === 'Nkosuo Division (Development)') {
+        localStorage.setItem('new_juaben_hero_subbadge', 'Modernization & Royal Heritage');
+        setHeroSubBadge('Modernization & Royal Heritage');
+      } else {
+        setHeroSubBadge(savedHeroSubBadge);
+      }
+
+      const savedHeroDesc = localStorage.getItem('new_juaben_hero_desc');
+      if (!savedHeroDesc || savedHeroDesc.includes('Led by the vision of the Council of Chiefs')) {
+        const newDesc = 'Led by the vision of the Omanhene, the Nkosuo (Development) Division drives rapid modernization, funding primary healthcare, building modern schools, launching agricultural cooperatives, and empowering the youth of New Juaben Traditional Area while preserving our royal ancestral legacy.';
+        localStorage.setItem('new_juaben_hero_desc', newDesc);
+        setHeroDesc(newDesc);
+      } else {
+        setHeroDesc(savedHeroDesc);
+      }
+
+      // Hero Stats
+      const savedHeroStats = localStorage.getItem('new_juaben_hero_stats');
+      if (savedHeroStats) {
+        try {
+          const parsed = JSON.parse(savedHeroStats);
+          if (Array.isArray(parsed)) {
+            const updated = parsed.map((stat: any) => {
+              if (stat && stat.label === "Divisional Communities" && stat.value === "7") {
+                return { ...stat, value: "8" };
+              }
+              return stat;
+            });
+            setHeroStats(updated);
+            localStorage.setItem('new_juaben_hero_stats', JSON.stringify(updated));
+          }
+        } catch (e) {
+          // use default
+        }
+      }
+
+      // Communities Data
+      const savedCommunities = localStorage.getItem('new_juaben_communities_data');
+      if (savedCommunities) {
+        try {
+          const parsed = JSON.parse(savedCommunities);
+          const hasSouth = Array.isArray(parsed) && parsed.some((c: any) => c && c.id === 'new_juaben_south');
+          if (!Array.isArray(parsed) || !hasSouth || parsed.length < COMMUNITIES_DATA.length) {
+            setCommunities(COMMUNITIES_DATA);
+            localStorage.setItem('new_juaben_communities_data', JSON.stringify(COMMUNITIES_DATA));
+          } else {
+            setCommunities(parsed);
+          }
+        } catch (e) {
           setCommunities(COMMUNITIES_DATA);
-          localStorage.setItem('new_juaben_communities_data', JSON.stringify(COMMUNITIES_DATA));
-        } else {
-          setCommunities(parsed);
         }
-      } catch (e) {
+      } else {
         setCommunities(COMMUNITIES_DATA);
+        localStorage.setItem('new_juaben_communities_data', JSON.stringify(COMMUNITIES_DATA));
       }
-    } else {
-      setCommunities(COMMUNITIES_DATA);
-      localStorage.setItem('new_juaben_communities_data', JSON.stringify(COMMUNITIES_DATA));
-    }
-    // Hero Background image
-    const savedHeroBg = localStorage.getItem('new_juaben_hero_bg_url');
-    if (savedHeroBg && savedHeroBg !== "/src/assets/images/omanhene_hero_bg_1783513909221.jpg") {
-      setHeroBgUrl(savedHeroBg);
-    } else {
-      const defaultBg = "/src/assets/images/new_juaben_council_chiefs_hero_1783507779624.jpg";
-      setHeroBgUrl(defaultBg);
-      localStorage.setItem('new_juaben_hero_bg_url', defaultBg);
-    }
 
-    // Hero Background Position Alignment
-    const savedHeroBgPos = localStorage.getItem('new_juaben_hero_bg_position');
-    if (savedHeroBgPos && savedHeroBgPos !== 'center 20%') {
-      setHeroBgPosition(savedHeroBgPos);
-    } else {
-      setHeroBgPosition('center 5%');
-    }
+      // Hero Background image
+      const savedHeroBg = localStorage.getItem('new_juaben_hero_bg_url');
+      if (savedHeroBg && savedHeroBg !== "" && !savedHeroBg.includes("omanhene_hero_bg")) {
+        setHeroBgUrl(savedHeroBg);
+      } else {
+        const defaultBg = "/src/assets/images/new_juaben_council_chiefs_hero_1783507779624.jpg";
+        setHeroBgUrl(defaultBg);
+        localStorage.setItem('new_juaben_hero_bg_url', defaultBg);
+      }
 
-    // Nkosuo Projects
-    const savedProjects = localStorage.getItem('new_juaben_nkosuo_projects');
-    if (savedProjects) {
-      try {
-        const parsed = JSON.parse(savedProjects);
-        const hasNewSouthProj = Array.isArray(parsed) && parsed.some((p: any) => p && p.communityId === 'new_juaben_south');
-        if (!Array.isArray(parsed) || !hasNewSouthProj || parsed.length < PROJECTS_DATA.length) {
+      // Hero Background Position Alignment
+      const savedHeroBgPos = localStorage.getItem('new_juaben_hero_bg_position');
+      if (savedHeroBgPos && savedHeroBgPos !== 'center 20%') {
+        setHeroBgPosition(savedHeroBgPos);
+      } else {
+        setHeroBgPosition('center 5%');
+      }
+
+      // Nkosuo Projects
+      const savedProjects = localStorage.getItem('new_juaben_nkosuo_projects');
+      if (savedProjects) {
+        try {
+          const parsed = JSON.parse(savedProjects);
+          const hasNewSouthProj = Array.isArray(parsed) && parsed.some((p: any) => p && p.communityId === 'new_juaben_south');
+          if (!Array.isArray(parsed) || !hasNewSouthProj || parsed.length < PROJECTS_DATA.length) {
+            setProjects(PROJECTS_DATA);
+            localStorage.setItem('new_juaben_nkosuo_projects', JSON.stringify(PROJECTS_DATA));
+          } else {
+            setProjects(parsed);
+          }
+        } catch (e) {
           setProjects(PROJECTS_DATA);
-          localStorage.setItem('new_juaben_nkosuo_projects', JSON.stringify(PROJECTS_DATA));
-        } else {
-          setProjects(parsed);
         }
-      } catch (e) {
+      } else {
         setProjects(PROJECTS_DATA);
+        localStorage.setItem('new_juaben_nkosuo_projects', JSON.stringify(PROJECTS_DATA));
       }
-    } else {
-      setProjects(PROJECTS_DATA);
-      localStorage.setItem('new_juaben_nkosuo_projects', JSON.stringify(PROJECTS_DATA));
-    }
 
-    // Traditional Events
-    const savedEvents = localStorage.getItem('new_juaben_nkosuo_events');
-    if (savedEvents) {
-      try {
-        const parsed = JSON.parse(savedEvents);
-        if (Array.isArray(parsed)) {
-          setEvents(parsed);
-        } else {
+      // Traditional Events
+      const savedEvents = localStorage.getItem('new_juaben_nkosuo_events');
+      if (savedEvents) {
+        try {
+          const parsed = JSON.parse(savedEvents);
+          if (Array.isArray(parsed)) {
+            setEvents(parsed);
+          } else {
+            setEvents(EVENTS_DATA);
+            localStorage.setItem('new_juaben_nkosuo_events', JSON.stringify(EVENTS_DATA));
+          }
+        } catch (e) {
           setEvents(EVENTS_DATA);
-          localStorage.setItem('new_juaben_nkosuo_events', JSON.stringify(EVENTS_DATA));
         }
-      } catch (e) {
+      } else {
         setEvents(EVENTS_DATA);
+        localStorage.setItem('new_juaben_nkosuo_events', JSON.stringify(EVENTS_DATA));
       }
-    } else {
-      setEvents(EVENTS_DATA);
-      localStorage.setItem('new_juaben_nkosuo_events', JSON.stringify(EVENTS_DATA));
-    }
 
-    // Gallery Items
-    const savedGallery = localStorage.getItem('new_juaben_nkosuo_gallery');
-    if (savedGallery) {
-      try {
-        const parsed = JSON.parse(savedGallery);
-        if (Array.isArray(parsed)) {
-          setGalleryItems(parsed);
-        } else {
+      // Gallery Items
+      const savedGallery = localStorage.getItem('new_juaben_nkosuo_gallery');
+      if (savedGallery) {
+        try {
+          const parsed = JSON.parse(savedGallery);
+          if (Array.isArray(parsed)) {
+            setGalleryItems(parsed);
+          } else {
+            setGalleryItems(GALLERY_ITEMS);
+            localStorage.setItem('new_juaben_nkosuo_gallery', JSON.stringify(GALLERY_ITEMS));
+          }
+        } catch (e) {
           setGalleryItems(GALLERY_ITEMS);
-          localStorage.setItem('new_juaben_nkosuo_gallery', JSON.stringify(GALLERY_ITEMS));
         }
-      } catch (e) {
+      } else {
         setGalleryItems(GALLERY_ITEMS);
+        localStorage.setItem('new_juaben_nkosuo_gallery', JSON.stringify(GALLERY_ITEMS));
       }
-    } else {
-      setGalleryItems(GALLERY_ITEMS);
-      localStorage.setItem('new_juaben_nkosuo_gallery', JSON.stringify(GALLERY_ITEMS));
-    }
 
-    // Adinkra Proverbs State Hydration
-    const savedProverbs = localStorage.getItem('new_juaben_adinkra_proverbs');
-    if (savedProverbs) {
-      try {
-        const parsed = JSON.parse(savedProverbs);
-        if (Array.isArray(parsed)) {
-          setAdinkraProverbs(parsed);
-        } else {
+      // Adinkra Proverbs State Hydration
+      const savedProverbs = localStorage.getItem('new_juaben_adinkra_proverbs');
+      if (savedProverbs) {
+        try {
+          const parsed = JSON.parse(savedProverbs);
+          if (Array.isArray(parsed)) {
+            setAdinkraProverbs(parsed);
+          } else {
+            setAdinkraProverbs(ADINKRA_PROVERBS);
+            localStorage.setItem('new_juaben_adinkra_proverbs', JSON.stringify(ADINKRA_PROVERBS));
+          }
+        } catch (e) {
           setAdinkraProverbs(ADINKRA_PROVERBS);
-          localStorage.setItem('new_juaben_adinkra_proverbs', JSON.stringify(ADINKRA_PROVERBS));
         }
-      } catch (e) {
+      } else {
         setAdinkraProverbs(ADINKRA_PROVERBS);
+        localStorage.setItem('new_juaben_adinkra_proverbs', JSON.stringify(ADINKRA_PROVERBS));
       }
-    } else {
-      setAdinkraProverbs(ADINKRA_PROVERBS);
-      localStorage.setItem('new_juaben_adinkra_proverbs', JSON.stringify(ADINKRA_PROVERBS));
-    }
 
-    // Traditional Leaders State Hydration
-    const savedLeaders = localStorage.getItem('new_juaben_traditional_leaders');
-    if (savedLeaders) {
-      try {
-        const parsed = JSON.parse(savedLeaders);
-        if (Array.isArray(parsed)) {
-          const filtered = parsed.filter((l: any) => l && l.id !== 'chief_nyamekrom');
-          if (filtered.length <= 3) {
+      // Traditional Leaders State Hydration
+      const savedLeaders = localStorage.getItem('new_juaben_traditional_leaders');
+      if (savedLeaders) {
+        try {
+          const parsed = JSON.parse(savedLeaders);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter((l: any) => l && l.id !== 'chief_nyamekrom');
+            if (filtered.length <= 3) {
+              setTraditionalLeaders(DEFAULT_LEADERS);
+              localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(DEFAULT_LEADERS));
+            } else {
+              setTraditionalLeaders(filtered);
+              if (filtered.length !== parsed.length) {
+                localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(filtered));
+              }
+            }
+          } else {
             setTraditionalLeaders(DEFAULT_LEADERS);
             localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(DEFAULT_LEADERS));
+          }
+        } catch (e) {
+          setTraditionalLeaders(DEFAULT_LEADERS);
+        }
+      } else {
+        setTraditionalLeaders(DEFAULT_LEADERS);
+        localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(DEFAULT_LEADERS));
+      }
+
+      // Citizen Feedback State Hydration
+      const savedFeedback = localStorage.getItem('new_juaben_nkosuo_feedback');
+      if (savedFeedback) {
+        try {
+          const parsed = JSON.parse(savedFeedback);
+          if (Array.isArray(parsed)) {
+            setFeedback(parsed);
           } else {
-            setTraditionalLeaders(filtered);
-            if (filtered.length !== parsed.length) {
-              localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(filtered));
+            setFeedback(INITIAL_FEEDBACK);
+            localStorage.setItem('new_juaben_nkosuo_feedback', JSON.stringify(INITIAL_FEEDBACK));
+          }
+        } catch (e) {
+          setFeedback(INITIAL_FEEDBACK);
+        }
+      } else {
+        setFeedback(INITIAL_FEEDBACK);
+        localStorage.setItem('new_juaben_nkosuo_feedback', JSON.stringify(INITIAL_FEEDBACK));
+      }
+
+      // Advisory Board State Hydration
+      const savedAdvisoryBoard = localStorage.getItem('new_juaben_advisory_board');
+      if (savedAdvisoryBoard) {
+        try {
+          const parsed = JSON.parse(savedAdvisoryBoard);
+          if (Array.isArray(parsed) && parsed.length <= 3) {
+            setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
+            localStorage.setItem('new_juaben_advisory_board', JSON.stringify(DEFAULT_ADVISORY_BOARD));
+          } else {
+            setAdvisoryBoard(parsed);
+          }
+        } catch (e) {
+          setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
+        }
+      } else {
+        setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
+        localStorage.setItem('new_juaben_advisory_board', JSON.stringify(DEFAULT_ADVISORY_BOARD));
+      }
+
+      // Contacts State Hydration
+      const savedContacts = localStorage.getItem('new_juaben_contacts');
+      if (savedContacts) {
+        try {
+          const parsed = JSON.parse(savedContacts);
+          if (parsed && typeof parsed === 'object' && 'phone' in parsed) {
+            setContacts(parsed);
+          } else {
+            setContacts(DEFAULT_CONTACT_INFO);
+            localStorage.setItem('new_juaben_contacts', JSON.stringify(DEFAULT_CONTACT_INFO));
+          }
+        } catch (e) {
+          setContacts(DEFAULT_CONTACT_INFO);
+        }
+      } else {
+        setContacts(DEFAULT_CONTACT_INFO);
+        localStorage.setItem('new_juaben_contacts', JSON.stringify(DEFAULT_CONTACT_INFO));
+      }
+    }
+
+    async function loadAllData() {
+      if (isSupabaseConfigured()) {
+        setIsDbLoading(true);
+        setSupabaseStatus('connected');
+        try {
+          // 1. Fetch dynamic settings
+          const logoTextVal = await supabaseService.getSetting('logo_text', 'Nkosuo Division New Juaben Traditional Area');
+          const logoSubtextVal = await supabaseService.getSetting('logo_subtext', 'Development & Cultural Legacy');
+          const logoImgUrlVal = await supabaseService.getSetting('logo_img_url', '/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg');
+          const heroTitle1Val = await supabaseService.getSetting('hero_title1', 'Nkosuo Division');
+          const heroTitle2Val = await supabaseService.getSetting('hero_title2', 'New Juaben Traditional Area');
+          const heroSubBadgeVal = await supabaseService.getSetting('hero_subbadge', 'Modernization & Royal Heritage');
+          const heroDescVal = await supabaseService.getSetting('hero_desc', 'Led by the vision of the Omanhene, the Nkosuo (Development) Division drives rapid modernization, funding primary healthcare, building modern schools, launching agricultural cooperatives, and empowering the youth of New Juaben Traditional Area while preserving our royal ancestral legacy.');
+          const heroBgUrlVal = await supabaseService.getSetting('hero_bg_url', '/src/assets/images/new_juaben_council_chiefs_hero_1783507779624.jpg');
+          const heroBgPosVal = await supabaseService.getSetting('hero_bg_position', 'center 5%');
+          const contactsVal = await supabaseService.getSetting('contacts', DEFAULT_CONTACT_INFO);
+          const heroStatsVal = await supabaseService.getSetting('hero_stats', [
+            { value: "8", label: "Divisional Communities" },
+            { value: "15+", label: "Nkosuo Projects" },
+            { value: "GH¢2.8M+", label: "Development Budget" },
+            { value: "180k+", label: "Beneficiaries Served" }
+          ]);
+
+          setLogoText(logoTextVal);
+          setLogoSubtext(logoSubtextVal);
+          setLogoImgUrl(logoImgUrlVal);
+          setHeroTitle1(heroTitle1Val);
+          setHeroTitle2(heroTitle2Val);
+          setHeroSubBadge(heroSubBadgeVal);
+          setHeroDesc(heroDescVal);
+          setHeroBgUrl(heroBgUrlVal);
+          setHeroBgPosition(heroBgPosVal);
+          setContacts(contactsVal);
+          setHeroStats(heroStatsVal);
+
+          // 2. Fetch structured collections
+          const dbCommunities = await supabaseService.getCommunities(COMMUNITIES_DATA);
+          const dbProjects = await supabaseService.getProjects(PROJECTS_DATA);
+          const dbEvents = await supabaseService.getEvents(EVENTS_DATA);
+          const dbGallery = await supabaseService.getGallery(GALLERY_ITEMS);
+          const dbProverbs = await supabaseService.getProverbs(ADINKRA_PROVERBS);
+          const dbLeaders = await supabaseService.getLeaders(DEFAULT_LEADERS);
+          const dbFeedback = await supabaseService.getFeedback(INITIAL_FEEDBACK);
+          const dbAdvisory = await supabaseService.getAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
+
+          setCommunities(dbCommunities);
+          setProjects(dbProjects);
+          setEvents(dbEvents);
+          setGalleryItems(dbGallery);
+          setAdinkraProverbs(dbProverbs);
+          setTraditionalLeaders(dbLeaders);
+          setFeedback(dbFeedback);
+          setAdvisoryBoard(dbAdvisory);
+
+          // 3. One-time Auto-seeding check if the remote DB has 0 projects
+          if (dbProjects.length === PROJECTS_DATA.length && PROJECTS_DATA.length > 0) {
+            // Check if we already synced or if we should execute a seed check
+            const { count, error } = await supabase!
+              .from('projects')
+              .select('*', { count: 'exact', head: true });
+            
+            if (!error && count === 0) {
+              console.log('Detected fresh empty Supabase database. Auto-seeding initial Council data...');
+              await supabaseService.syncCommunities(COMMUNITIES_DATA);
+              await supabaseService.syncProjects(PROJECTS_DATA);
+              await supabaseService.syncEvents(EVENTS_DATA);
+              await supabaseService.syncGallery(GALLERY_ITEMS);
+              await supabaseService.syncLeaders(DEFAULT_LEADERS);
+              await supabaseService.syncProverbs(ADINKRA_PROVERBS);
+              await supabaseService.syncFeedback(INITIAL_FEEDBACK);
+              await supabaseService.syncAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
+
+              await supabaseService.setSetting('logo_text', 'Nkosuo Division New Juaben Traditional Area');
+              await supabaseService.setSetting('logo_subtext', 'Development & Cultural Legacy');
+              await supabaseService.setSetting('logo_img_url', '/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg');
+              await supabaseService.setSetting('hero_title1', 'Nkosuo Division');
+              await supabaseService.setSetting('hero_title2', 'New Juaben Traditional Area');
+              await supabaseService.setSetting('hero_subbadge', 'Modernization & Royal Heritage');
+              await supabaseService.setSetting('hero_desc', 'Led by the vision of the Omanhene, the Nkosuo (Development) Division drives rapid modernization, funding primary healthcare, building modern schools, launching agricultural cooperatives, and empowering the youth of New Juaben Traditional Area while preserving our royal ancestral legacy.');
+              await supabaseService.setSetting('hero_bg_url', '/src/assets/images/new_juaben_council_chiefs_hero_1783507779624.jpg');
+              await supabaseService.setSetting('hero_bg_position', 'center 5%');
+              await supabaseService.setSetting('contacts', DEFAULT_CONTACT_INFO);
+              await supabaseService.setSetting('hero_stats', [
+                { value: "8", label: "Divisional Communities" },
+                { value: "15+", label: "Nkosuo Projects" },
+                { value: "GH¢2.8M+", label: "Development Budget" },
+                { value: "180k+", label: "Beneficiaries Served" }
+              ]);
             }
           }
-        } else {
-          setTraditionalLeaders(DEFAULT_LEADERS);
-          localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(DEFAULT_LEADERS));
+
+        } catch (err) {
+          console.error('Failed to load from Supabase, falling back to localStorage', err);
+          setSupabaseStatus('error');
+          loadLocalFallback();
+        } finally {
+          setIsDbLoading(false);
         }
-      } catch (e) {
-        setTraditionalLeaders(DEFAULT_LEADERS);
+      } else {
+        setSupabaseStatus('not_configured');
+        loadLocalFallback();
       }
-    } else {
-      setTraditionalLeaders(DEFAULT_LEADERS);
-      localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(DEFAULT_LEADERS));
     }
 
-    // Citizen Feedback State Hydration
-    const savedFeedback = localStorage.getItem('new_juaben_nkosuo_feedback');
-    if (savedFeedback) {
-      try {
-        const parsed = JSON.parse(savedFeedback);
-        if (Array.isArray(parsed)) {
-          setFeedback(parsed);
-        } else {
-          setFeedback(INITIAL_FEEDBACK);
-          localStorage.setItem('new_juaben_nkosuo_feedback', JSON.stringify(INITIAL_FEEDBACK));
-        }
-      } catch (e) {
-        setFeedback(INITIAL_FEEDBACK);
-      }
-    } else {
-      setFeedback(INITIAL_FEEDBACK);
-      localStorage.setItem('new_juaben_nkosuo_feedback', JSON.stringify(INITIAL_FEEDBACK));
-    }
-
-    // Advisory Board State Hydration
-    const savedAdvisoryBoard = localStorage.getItem('new_juaben_advisory_board');
-    if (savedAdvisoryBoard) {
-      try {
-        const parsed = JSON.parse(savedAdvisoryBoard);
-        if (Array.isArray(parsed) && parsed.length <= 3) {
-          // Auto migrate 3-member list to full 10-member board
-          setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
-          localStorage.setItem('new_juaben_advisory_board', JSON.stringify(DEFAULT_ADVISORY_BOARD));
-        } else {
-          setAdvisoryBoard(parsed);
-        }
-      } catch (e) {
-        setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
-      }
-    } else {
-      setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
-      localStorage.setItem('new_juaben_advisory_board', JSON.stringify(DEFAULT_ADVISORY_BOARD));
-    }
-
-    // Contacts State Hydration
-    const savedContacts = localStorage.getItem('new_juaben_contacts');
-    if (savedContacts) {
-      try {
-        const parsed = JSON.parse(savedContacts);
-        if (parsed && typeof parsed === 'object' && 'phone' in parsed) {
-          setContacts(parsed);
-        } else {
-          setContacts(DEFAULT_CONTACT_INFO);
-          localStorage.setItem('new_juaben_contacts', JSON.stringify(DEFAULT_CONTACT_INFO));
-        }
-      } catch (e) {
-        setContacts(DEFAULT_CONTACT_INFO);
-      }
-    } else {
-      setContacts(DEFAULT_CONTACT_INFO);
-      localStorage.setItem('new_juaben_contacts', JSON.stringify(DEFAULT_CONTACT_INFO));
-    }
+    loadAllData();
   }, []);
+
 
   // Keep activeSection state and reset scroll position to the top of the new page on tab change
   useEffect(() => {
@@ -578,6 +693,9 @@ export default function App() {
                   const updated = [newFb, ...feedback];
                   setFeedback(updated);
                   localStorage.setItem('new_juaben_nkosuo_feedback', JSON.stringify(updated));
+                  if (isSupabaseConfigured()) {
+                    supabaseService.syncFeedback(updated);
+                  }
                 }} 
               />
             </motion.div>
@@ -610,88 +728,167 @@ export default function App() {
       {showAdmin && (
         <AdminDashboard
           onClose={() => setShowAdmin(false)}
+          isDbLoading={isDbLoading}
+          supabaseStatus={supabaseStatus}
           feedback={feedback}
           setFeedback={(newFeedback) => {
-            setFeedback(newFeedback);
-            localStorage.setItem('new_juaben_nkosuo_feedback', JSON.stringify(newFeedback));
+            const resolved = typeof newFeedback === 'function' ? (newFeedback as any)(feedback) : newFeedback;
+            setFeedback(resolved);
+            localStorage.setItem('new_juaben_nkosuo_feedback', JSON.stringify(resolved));
+            if (isSupabaseConfigured()) {
+              supabaseService.syncFeedback(resolved);
+            }
           }}
           projects={projects}
-          setProjects={setProjects}
+          setProjects={(newProjects) => {
+            const resolved = typeof newProjects === 'function' ? (newProjects as any)(projects) : newProjects;
+            setProjects(resolved);
+            localStorage.setItem('new_juaben_nkosuo_projects', JSON.stringify(resolved));
+            if (isSupabaseConfigured()) {
+              supabaseService.syncProjects(resolved);
+            }
+          }}
           events={events}
-          setEvents={setEvents}
+          setEvents={(newEvents) => {
+            const resolved = typeof newEvents === 'function' ? (newEvents as any)(events) : newEvents;
+            setEvents(resolved);
+            localStorage.setItem('new_juaben_nkosuo_events', JSON.stringify(resolved));
+            if (isSupabaseConfigured()) {
+              supabaseService.syncEvents(resolved);
+            }
+          }}
           galleryItems={galleryItems}
-          setGalleryItems={setGalleryItems}
+          setGalleryItems={(newItems) => {
+            const resolved = typeof newItems === 'function' ? (newItems as any)(galleryItems) : newItems;
+            setGalleryItems(resolved);
+            localStorage.setItem('new_juaben_nkosuo_gallery', JSON.stringify(resolved));
+            if (isSupabaseConfigured()) {
+              supabaseService.syncGallery(resolved);
+            }
+          }}
           adinkraProverbs={adinkraProverbs}
           setAdinkraProverbs={(newProverbs) => {
-            setAdinkraProverbs(newProverbs);
-            localStorage.setItem('new_juaben_adinkra_proverbs', JSON.stringify(newProverbs));
+            const resolved = typeof newProverbs === 'function' ? (newProverbs as any)(adinkraProverbs) : newProverbs;
+            setAdinkraProverbs(resolved);
+            localStorage.setItem('new_juaben_adinkra_proverbs', JSON.stringify(resolved));
+            if (isSupabaseConfigured()) {
+              supabaseService.syncProverbs(resolved);
+            }
           }}
           heroBgUrl={heroBgUrl}
-          setHeroBgUrl={setHeroBgUrl}
+          setHeroBgUrl={(newUrl) => {
+            const resolved = typeof newUrl === 'function' ? (newUrl as any)(heroBgUrl) : newUrl;
+            setHeroBgUrl(resolved);
+            localStorage.setItem('new_juaben_hero_bg_url', resolved);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('hero_bg_url', resolved);
+            }
+          }}
           traditionalLeaders={traditionalLeaders}
           setTraditionalLeaders={(newLeaders) => {
-            setTraditionalLeaders(newLeaders);
-            localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(newLeaders));
+            const resolved = typeof newLeaders === 'function' ? (newLeaders as any)(traditionalLeaders) : newLeaders;
+            setTraditionalLeaders(resolved);
+            localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(resolved));
+            if (isSupabaseConfigured()) {
+              supabaseService.syncLeaders(resolved);
+            }
           }}
           communities={communities.length > 0 ? communities : COMMUNITIES_DATA}
           setCommunities={(newComms) => {
-            setCommunities(newComms);
-            localStorage.setItem('new_juaben_communities_data', JSON.stringify(newComms));
+            const resolved = typeof newComms === 'function' ? (newComms as any)(communities) : newComms;
+            setCommunities(resolved);
+            localStorage.setItem('new_juaben_communities_data', JSON.stringify(resolved));
+            if (isSupabaseConfigured()) {
+              supabaseService.syncCommunities(resolved);
+            }
           }}
           logoText={logoText}
           setLogoText={(val) => {
             setLogoText(val);
             localStorage.setItem('new_juaben_logo_text', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('logo_text', val);
+            }
           }}
           logoSubtext={logoSubtext}
           setLogoSubtext={(val) => {
             setLogoSubtext(val);
             localStorage.setItem('new_juaben_logo_subtext', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('logo_subtext', val);
+            }
           }}
           logoImgUrl={logoImgUrl}
           setLogoImgUrl={(val) => {
             setLogoImgUrl(val);
             localStorage.setItem('new_juaben_logo_img_url', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('logo_img_url', val);
+            }
           }}
           heroTitle1={heroTitle1}
           setHeroTitle1={(val) => {
             setHeroTitle1(val);
             localStorage.setItem('new_juaben_hero_title1', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('hero_title1', val);
+            }
           }}
           heroTitle2={heroTitle2}
           setHeroTitle2={(val) => {
             setHeroTitle2(val);
             localStorage.setItem('new_juaben_hero_title2', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('hero_title2', val);
+            }
           }}
           heroSubBadge={heroSubBadge}
           setHeroSubBadge={(val) => {
             setHeroSubBadge(val);
             localStorage.setItem('new_juaben_hero_subbadge', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('hero_subbadge', val);
+            }
           }}
           heroDesc={heroDesc}
           setHeroDesc={(val) => {
             setHeroDesc(val);
             localStorage.setItem('new_juaben_hero_desc', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('hero_desc', val);
+            }
           }}
           heroStats={computedHeroStats}
           setHeroStats={(val) => {
             setHeroStats(val);
             localStorage.setItem('new_juaben_hero_stats', JSON.stringify(val));
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('hero_stats', val);
+            }
           }}
           heroBgPosition={heroBgPosition}
           setHeroBgPosition={(val) => {
             setHeroBgPosition(val);
             localStorage.setItem('new_juaben_hero_bg_position', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('hero_bg_position', val);
+            }
           }}
           advisoryBoard={advisoryBoard}
           setAdvisoryBoard={(val) => {
             setAdvisoryBoard(val);
             localStorage.setItem('new_juaben_advisory_board', JSON.stringify(val));
+            if (isSupabaseConfigured()) {
+              supabaseService.syncAdvisoryBoard(val);
+            }
           }}
           contacts={contacts}
           setContacts={(val) => {
             setContacts(val);
             localStorage.setItem('new_juaben_contacts', JSON.stringify(val));
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('contacts', val);
+            }
           }}
         />
       )}
