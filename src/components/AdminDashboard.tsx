@@ -87,6 +87,12 @@ interface AdminDashboardProps {
   setHeroBgPosition: (val: string) => void;
   advisoryBoard?: AdvisoryBoardMember[];
   setAdvisoryBoard?: (val: AdvisoryBoardMember[]) => void;
+  advisorySubtitle?: string;
+  setAdvisorySubtitle?: (val: string) => void;
+  advisoryTitle?: string;
+  setAdvisoryTitle?: (val: string) => void;
+  advisoryDesc?: string;
+  setAdvisoryDesc?: (val: string) => void;
   contacts?: ContactInfo;
   setContacts?: (val: ContactInfo) => void;
   isDbLoading?: boolean;
@@ -161,6 +167,12 @@ export default function AdminDashboard({
   setHeroBgPosition,
   advisoryBoard,
   setAdvisoryBoard,
+  advisorySubtitle: propAdvisorySubtitle,
+  setAdvisorySubtitle: propSetAdvisorySubtitle,
+  advisoryTitle: propAdvisoryTitle,
+  setAdvisoryTitle: propSetAdvisoryTitle,
+  advisoryDesc: propAdvisoryDesc,
+  setAdvisoryDesc: propSetAdvisoryDesc,
   contacts: propContacts,
   setContacts: propSetContacts,
   isDbLoading,
@@ -169,6 +181,18 @@ export default function AdminDashboard({
   const [internalAdvisoryBoard, setInternalAdvisoryBoard] = useState<AdvisoryBoardMember[]>([]);
   const advisoryMembers = advisoryBoard !== undefined ? advisoryBoard : internalAdvisoryBoard;
   const setAdvisoryMembers = setAdvisoryBoard !== undefined ? setAdvisoryBoard : setInternalAdvisoryBoard;
+
+  const [internalAdvisorySubtitle, setInternalAdvisorySubtitle] = useState<string>('Advisory Council & Strategy');
+  const advisorySubtitle = propAdvisorySubtitle !== undefined ? propAdvisorySubtitle : internalAdvisorySubtitle;
+  const setAdvisorySubtitle = propSetAdvisorySubtitle !== undefined ? propSetAdvisorySubtitle : setInternalAdvisorySubtitle;
+
+  const [internalAdvisoryTitle, setInternalAdvisoryTitle] = useState<string>('Nkosuo Advisory Board');
+  const advisoryTitle = propAdvisoryTitle !== undefined ? propAdvisoryTitle : internalAdvisoryTitle;
+  const setAdvisoryTitle = propSetAdvisoryTitle !== undefined ? propSetAdvisoryTitle : setInternalAdvisoryTitle;
+
+  const [internalAdvisoryDesc, setInternalAdvisoryDesc] = useState<string>('A distinguished panel of technical experts, development economists, healthcare champions, and financial specialists advising the Nkosuo Division on the strategic implementation of our modernization projects.');
+  const advisoryDesc = propAdvisoryDesc !== undefined ? propAdvisoryDesc : internalAdvisoryDesc;
+  const setAdvisoryDesc = propSetAdvisoryDesc !== undefined ? propSetAdvisoryDesc : setInternalAdvisoryDesc;
 
   const [internalFeedback, setInternalFeedback] = useState<FeedbackSubmission[]>([]);
   const feedback = propFeedback !== undefined ? propFeedback : internalFeedback;
@@ -4184,6 +4208,23 @@ export default function AdminDashboard({
                             className="w-full bg-[#0d0d0d] border border-neutral-800 rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none"
                           />
                         </div>
+
+                        <div>
+                          <label className="block text-[10px] font-sans font-black text-neutral-400 uppercase tracking-wider mb-1.5">
+                            Reign Name/Title <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={communityForm.queenProfile.reignTitle}
+                            onChange={(e) => setCommunityForm(prev => ({
+                              ...prev,
+                              queenProfile: { ...prev.queenProfile, reignTitle: e.target.value }
+                            }))}
+                            placeholder="e.g. Nana Adwoa Akyaamaa II"
+                            className="w-full bg-[#0d0d0d] border border-neutral-800 rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -4291,6 +4332,55 @@ export default function AdminDashboard({
                 <p className="text-xs text-neutral-400 mt-1 font-sans">
                   Manage the profiles, roles, and portrait photographs of the prestigious Advisory Board members supporting the Nkosuo Division.
                 </p>
+              </div>
+
+              {/* PUBLIC HEADER CUSTOMIZER */}
+              <div className="bg-neutral-900 border border-neutral-800 p-5 sm:p-6 rounded-xl space-y-6">
+                <h3 className="text-xs font-sans font-black text-[#D4AF37] uppercase tracking-widest border-b border-neutral-800 pb-2 flex items-center justify-between">
+                  <span>Advisory Board Header & Intro Text</span>
+                  <span className="text-[9px] text-neutral-500 font-mono font-normal">PERSISTED IN PUBLIC ADVISORY SECTION</span>
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-[10px] font-sans font-black text-neutral-400 uppercase tracking-wider mb-2">
+                      Advisory Section Sub-badge
+                    </label>
+                    <input
+                      type="text"
+                      value={advisorySubtitle}
+                      onChange={(e) => setAdvisorySubtitle(e.target.value)}
+                      placeholder="e.g. Advisory Council & Strategy"
+                      className="w-full bg-neutral-950 border border-neutral-800 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] rounded-xl px-4 py-3 text-xs text-white placeholder-neutral-600 transition-all focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-sans font-black text-neutral-400 uppercase tracking-wider mb-2">
+                      Advisory Section Title
+                    </label>
+                    <input
+                      type="text"
+                      value={advisoryTitle}
+                      onChange={(e) => setAdvisoryTitle(e.target.value)}
+                      placeholder="e.g. Nkosuo Advisory Board"
+                      className="w-full bg-neutral-950 border border-neutral-800 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] rounded-xl px-4 py-3 text-xs text-white placeholder-neutral-600 transition-all focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-sans font-black text-neutral-400 uppercase tracking-wider mb-2">
+                    Advisory Section Introduction / Description
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={advisoryDesc}
+                    onChange={(e) => setAdvisoryDesc(e.target.value)}
+                    placeholder="Brief introductory description explaining the board's strategic purpose..."
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] rounded-xl px-4 py-3 text-xs text-white placeholder-neutral-600 transition-all focus:outline-none resize-none font-sans leading-relaxed"
+                  />
+                </div>
               </div>
 
               {/* Grid: Form and Current Members List */}

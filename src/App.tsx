@@ -110,6 +110,11 @@ export default function App() {
   const [heroSubBadge, setHeroSubBadge] = useState<string>('Modernization & Royal Heritage');
   const [heroDesc, setHeroDesc] = useState<string>('Led by the vision of the Omanhene, the Nkosuo (Development) Division drives rapid modernization, funding primary healthcare, building modern schools, launching agricultural cooperatives, and empowering the youth of New Juaben Traditional Area while preserving our royal ancestral legacy.');
 
+  // Advisory Board Text States
+  const [advisorySubtitle, setAdvisorySubtitle] = useState<string>('Advisory Council & Strategy');
+  const [advisoryTitle, setAdvisoryTitle] = useState<string>('Nkosuo Advisory Board');
+  const [advisoryDesc, setAdvisoryDesc] = useState<string>('A distinguished panel of technical experts, development economists, healthcare champions, and financial specialists advising the Nkosuo Division on the strategic implementation of our modernization projects.');
+
   // Hero Stats State
   const [heroStats, setHeroStats] = useState<Array<{value: string, label: string}>>([
     { value: "8", label: "Divisional Communities" },
@@ -248,6 +253,28 @@ export default function App() {
         setHeroDesc(newDesc);
       } else {
         setHeroDesc(savedHeroDesc);
+      }
+
+      // Advisory Board Texts
+      const savedAdvisorySubtitle = localStorage.getItem('new_juaben_advisory_subtitle');
+      if (savedAdvisorySubtitle) {
+        setAdvisorySubtitle(savedAdvisorySubtitle);
+      } else {
+        setAdvisorySubtitle('Advisory Council & Strategy');
+      }
+
+      const savedAdvisoryTitle = localStorage.getItem('new_juaben_advisory_title');
+      if (savedAdvisoryTitle) {
+        setAdvisoryTitle(savedAdvisoryTitle);
+      } else {
+        setAdvisoryTitle('Nkosuo Advisory Board');
+      }
+
+      const savedAdvisoryDesc = localStorage.getItem('new_juaben_advisory_desc');
+      if (savedAdvisoryDesc) {
+        setAdvisoryDesc(savedAdvisoryDesc);
+      } else {
+        setAdvisoryDesc('A distinguished panel of technical experts, development economists, healthcare champions, and financial specialists advising the Nkosuo Division on the strategic implementation of our modernization projects.');
       }
 
       // Hero Stats
@@ -491,6 +518,9 @@ export default function App() {
             { value: "GH¢2.8M+", label: "Development Budget" },
             { value: "180k+", label: "Beneficiaries Served" }
           ]);
+          const advisorySubtitleVal = await supabaseService.getSetting('advisory_subtitle', 'Advisory Council & Strategy');
+          const advisoryTitleVal = await supabaseService.getSetting('advisory_title', 'Nkosuo Advisory Board');
+          const advisoryDescVal = await supabaseService.getSetting('advisory_desc', 'A distinguished panel of technical experts, development economists, healthcare champions, and financial specialists advising the Nkosuo Division on the strategic implementation of our modernization projects.');
 
           setLogoText(logoTextVal);
           setLogoSubtext(logoSubtextVal);
@@ -503,6 +533,9 @@ export default function App() {
           setHeroBgPosition(heroBgPosVal);
           setContacts(contactsVal);
           setHeroStats(heroStatsVal);
+          setAdvisorySubtitle(advisorySubtitleVal);
+          setAdvisoryTitle(advisoryTitleVal);
+          setAdvisoryDesc(advisoryDescVal);
 
           // 2. Fetch structured collections
           const dbCommunities = await supabaseService.getCommunities(COMMUNITIES_DATA, databaseSeededVal);
@@ -562,6 +595,9 @@ export default function App() {
               { value: "GH¢2.8M+", label: "Development Budget" },
               { value: "180k+", label: "Beneficiaries Served" }
             ]);
+            await supabaseService.setSetting('advisory_subtitle', 'Advisory Council & Strategy');
+            await supabaseService.setSetting('advisory_title', 'Nkosuo Advisory Board');
+            await supabaseService.setSetting('advisory_desc', 'A distinguished panel of technical experts, development economists, healthcare champions, and financial specialists advising the Nkosuo Division on the strategic implementation of our modernization projects.');
             await supabaseService.setSetting('database_seeded', true);
             localStorage.setItem('new_juaben_database_seeded', 'true');
 
@@ -722,7 +758,12 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.3 }}
             >
-              <AdvisoryBoard members={advisoryBoard} />
+              <AdvisoryBoard 
+                members={advisoryBoard} 
+                subtitle={advisorySubtitle}
+                title={advisoryTitle}
+                desc={advisoryDesc}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -943,6 +984,30 @@ export default function App() {
               const deleted = advisoryBoard.filter(m => !val.some(r => r.id === m.id));
               deleted.forEach(m => supabaseService.deleteAdvisoryMember(m.id));
               supabaseService.syncAdvisoryBoard(val);
+            }
+          }}
+          advisorySubtitle={advisorySubtitle}
+          setAdvisorySubtitle={(val) => {
+            setAdvisorySubtitle(val);
+            localStorage.setItem('new_juaben_advisory_subtitle', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('advisory_subtitle', val);
+            }
+          }}
+          advisoryTitle={advisoryTitle}
+          setAdvisoryTitle={(val) => {
+            setAdvisoryTitle(val);
+            localStorage.setItem('new_juaben_advisory_title', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('advisory_title', val);
+            }
+          }}
+          advisoryDesc={advisoryDesc}
+          setAdvisoryDesc={(val) => {
+            setAdvisoryDesc(val);
+            localStorage.setItem('new_juaben_advisory_desc', val);
+            if (isSupabaseConfigured()) {
+              supabaseService.setSetting('advisory_desc', val);
             }
           }}
           contacts={contacts}

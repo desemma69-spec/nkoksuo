@@ -231,7 +231,7 @@ export const supabaseService = {
       const { data, error } = await supabase
         .from('feedback')
         .select('*')
-        .order('createdAt', { ascending: false });
+        .order('created_at', { ascending: false });
       if (error) throw error;
       if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultFeedback;
       return data.map((item: any) => ({
@@ -245,8 +245,12 @@ export const supabaseService = {
         createdAt: item.createdAt || item.createdat,
         isRead: item.isRead !== undefined ? item.isRead : item.isread
       })) as FeedbackSubmission[];
-    } catch (e) {
-      console.error('Error fetching feedback:', e);
+    } catch (e: any) {
+      if (e?.code === '42P01') {
+        console.warn('Supabase "feedback" table does not exist. Please execute the SQL script in "supabase_setup.sql" inside your Supabase dashboard SQL Editor.');
+      } else {
+        console.error('Error fetching feedback:', e);
+      }
       return defaultFeedback;
     }
   },
@@ -350,8 +354,12 @@ export const supabaseService = {
         bio: item.bio,
         imageUrl: item.imageUrl || item.imageurl
       })) as AdvisoryBoardMember[];
-    } catch (e) {
-      console.error('Error fetching advisory board:', e);
+    } catch (e: any) {
+      if (e?.code === '42P01') {
+        console.warn('Supabase "advisory_board" table does not exist. Please execute the SQL script in "supabase_setup.sql" inside your Supabase dashboard SQL Editor.');
+      } else {
+        console.error('Error fetching advisory board:', e);
+      }
       return defaultBoard;
     }
   },

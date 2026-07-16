@@ -4,9 +4,17 @@ import { Shield, Briefcase, GraduationCap } from 'lucide-react';
 
 interface AdvisoryBoardProps {
   members: AdvisoryBoardMember[];
+  subtitle?: string;
+  title?: string;
+  desc?: string;
 }
 
-export default function AdvisoryBoard({ members }: AdvisoryBoardProps) {
+export default function AdvisoryBoard({ 
+  members,
+  subtitle = 'Advisory Council & Strategy',
+  title = 'Nkosuo Advisory Board',
+  desc = 'A distinguished panel of technical experts, development economists, healthcare champions, and financial specialists advising the Nkosuo Division on the strategic implementation of our modernization projects.'
+}: AdvisoryBoardProps) {
   return (
     <section id="advisory-board-section" className="pt-36 sm:pt-44 pb-24 px-4 sm:px-6 lg:px-8 bg-neutral-950 text-neutral-100 relative overflow-hidden">
       {/* Aesthetic Background Accents */}
@@ -17,14 +25,14 @@ export default function AdvisoryBoard({ members }: AdvisoryBoardProps) {
         {/* Section Header */}
         <div id="advisory-board-header" className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-xs sm:text-sm font-mono text-[#D4AF37] uppercase tracking-widest block mb-2">
-            Advisory Council & Strategy
+            {subtitle}
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-sans font-bold tracking-tight text-white uppercase">
-            Nkosuo Advisory Board
+            {title}
           </h2>
           <div className="h-1 w-20 bg-gradient-to-r from-[#990000] to-[#D4AF37] mx-auto mt-6 rounded-full" />
           <p className="mt-4 text-sm sm:text-base text-neutral-400 leading-relaxed font-sans">
-            A distinguished panel of technical experts, development economists, healthcare champions, and financial specialists advising the Nkosuo Division on the strategic implementation of our modernization projects.
+            {desc}
           </p>
         </div>
 
