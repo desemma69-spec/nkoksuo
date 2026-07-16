@@ -50,7 +50,7 @@ export const supabaseService = {
   },
 
   // --- PROJECTS ---
-  async getProjects(defaultProjects: Project[]): Promise<Project[]> {
+  async getProjects(defaultProjects: Project[], hasBeenSeeded: boolean = false): Promise<Project[]> {
     if (!supabase) return defaultProjects;
     try {
       const { data, error } = await supabase
@@ -58,7 +58,7 @@ export const supabaseService = {
         .select('*')
         .order('id', { ascending: true });
       if (error) throw error;
-      if (!data || data.length === 0) return defaultProjects;
+      if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultProjects;
       return data.map((item: any) => ({
         id: item.id,
         title: item.title,
@@ -114,7 +114,7 @@ export const supabaseService = {
   },
 
   // --- EVENTS ---
-  async getEvents(defaultEvents: RoyalEvent[]): Promise<RoyalEvent[]> {
+  async getEvents(defaultEvents: RoyalEvent[], hasBeenSeeded: boolean = false): Promise<RoyalEvent[]> {
     if (!supabase) return defaultEvents;
     try {
       const { data, error } = await supabase
@@ -122,7 +122,7 @@ export const supabaseService = {
         .select('*')
         .order('date', { ascending: false });
       if (error) throw error;
-      if (!data || data.length === 0) return defaultEvents;
+      if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultEvents;
       return data.map((item: any) => ({
         id: item.id,
         title: item.title,
@@ -173,7 +173,7 @@ export const supabaseService = {
   },
 
   // --- GALLERY ---
-  async getGallery(defaultGallery: GalleryItem[]): Promise<GalleryItem[]> {
+  async getGallery(defaultGallery: GalleryItem[], hasBeenSeeded: boolean = false): Promise<GalleryItem[]> {
     if (!supabase) return defaultGallery;
     try {
       const { data, error } = await supabase
@@ -181,7 +181,7 @@ export const supabaseService = {
         .select('*')
         .order('id', { ascending: false });
       if (error) throw error;
-      if (!data || data.length === 0) return defaultGallery;
+      if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultGallery;
       return data.map((item: any) => ({
         id: item.id,
         title: item.title,
@@ -225,7 +225,7 @@ export const supabaseService = {
   },
 
   // --- FEEDBACK ---
-  async getFeedback(defaultFeedback: FeedbackSubmission[]): Promise<FeedbackSubmission[]> {
+  async getFeedback(defaultFeedback: FeedbackSubmission[], hasBeenSeeded: boolean = false): Promise<FeedbackSubmission[]> {
     if (!supabase) return defaultFeedback;
     try {
       const { data, error } = await supabase
@@ -233,7 +233,7 @@ export const supabaseService = {
         .select('*')
         .order('createdAt', { ascending: false });
       if (error) throw error;
-      if (!data) return defaultFeedback;
+      if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultFeedback;
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,
@@ -279,8 +279,23 @@ export const supabaseService = {
     }
   },
 
+  async deleteFeedback(id: string): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('feedback')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('Error deleting feedback:', e);
+      return false;
+    }
+  },
+
   // --- TRADITIONAL LEADERS ---
-  async getLeaders(defaultLeaders: TraditionalLeader[]): Promise<TraditionalLeader[]> {
+  async getLeaders(defaultLeaders: TraditionalLeader[], hasBeenSeeded: boolean = false): Promise<TraditionalLeader[]> {
     if (!supabase) return defaultLeaders;
     try {
       const { data, error } = await supabase
@@ -288,7 +303,7 @@ export const supabaseService = {
         .select('*')
         .order('id', { ascending: true });
       if (error) throw error;
-      if (!data || data.length === 0) return defaultLeaders;
+      if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultLeaders;
       return data.map((item: any) => ({
         id: item.id,
         role: item.role,
@@ -298,7 +313,7 @@ export const supabaseService = {
         bio: item.bio
       })) as TraditionalLeader[];
     } catch (e) {
-      console.error('Error fetching leaders:', e);
+      console.warn('Error fetching leaders:', e);
       return defaultLeaders;
     }
   },
@@ -312,13 +327,13 @@ export const supabaseService = {
       if (error) throw error;
       return true;
     } catch (e) {
-      console.error('Error syncing leaders:', e);
+      console.warn('Error syncing leaders:', e);
       return false;
     }
   },
 
   // --- ADVISORY BOARD ---
-  async getAdvisoryBoard(defaultBoard: AdvisoryBoardMember[]): Promise<AdvisoryBoardMember[]> {
+  async getAdvisoryBoard(defaultBoard: AdvisoryBoardMember[], hasBeenSeeded: boolean = false): Promise<AdvisoryBoardMember[]> {
     if (!supabase) return defaultBoard;
     try {
       const { data, error } = await supabase
@@ -326,7 +341,7 @@ export const supabaseService = {
         .select('*')
         .order('id', { ascending: true });
       if (error) throw error;
-      if (!data || data.length === 0) return defaultBoard;
+      if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultBoard;
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,
@@ -355,15 +370,30 @@ export const supabaseService = {
     }
   },
 
+  async deleteAdvisoryMember(id: string): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('advisory_board')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('Error deleting advisory board member:', e);
+      return false;
+    }
+  },
+
   // --- ADINKRA PROVERBS ---
-  async getProverbs(defaultProverbs: AdinkraProverb[]): Promise<AdinkraProverb[]> {
+  async getProverbs(defaultProverbs: AdinkraProverb[], hasBeenSeeded: boolean = false): Promise<AdinkraProverb[]> {
     if (!supabase) return defaultProverbs;
     try {
       const { data, error } = await supabase
         .from('adinkra_proverbs')
         .select('*');
       if (error) throw error;
-      if (!data || data.length === 0) return defaultProverbs;
+      if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultProverbs;
       return data as AdinkraProverb[];
     } catch (e) {
       console.error('Error fetching proverbs:', e);
@@ -385,8 +415,23 @@ export const supabaseService = {
     }
   },
 
+  async deleteProverb(symbol: string): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('adinkra_proverbs')
+        .delete()
+        .eq('symbol', symbol);
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('Error deleting proverb:', e);
+      return false;
+    }
+  },
+
   // --- COMMUNITIES ---
-  async getCommunities(defaultComms: Community[]): Promise<Community[]> {
+  async getCommunities(defaultComms: Community[], hasBeenSeeded: boolean = false): Promise<Community[]> {
     if (!supabase) return defaultComms;
     try {
       const { data, error } = await supabase
@@ -394,7 +439,7 @@ export const supabaseService = {
         .select('*')
         .order('id', { ascending: true });
       if (error) throw error;
-      if (!data || data.length === 0) return defaultComms;
+      if (!data || data.length === 0) return hasBeenSeeded ? [] : defaultComms;
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,
@@ -421,6 +466,21 @@ export const supabaseService = {
       return true;
     } catch (e) {
       console.error('Error syncing communities:', e);
+      return false;
+    }
+  },
+
+  async deleteCommunity(id: string): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('communities')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('Error deleting community:', e);
       return false;
     }
   },

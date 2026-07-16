@@ -855,14 +855,6 @@ export const DEFAULT_LEADERS = [
     bio: "Highly revered Paramount Chief of the New Juaben Traditional Area, serving as the supreme cultural patron of traditional values and modernization across all divisional kingdoms."
   },
   {
-    id: "hemaa",
-    role: "NEW JUABENG HEMAA",
-    name: "Nana Juaben Serwaa III",
-    title: "Queen Mother of New Juaben Traditional Area",
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400",
-    bio: "The venerable Queen Mother, actively championing female socio-economic empowerment, youth vocational guilds, and infant healthcare sanitation projects."
-  },
-  {
     id: "nkosuo_hene",
     role: "NEW JUABEN NKOSUO HENE / NYAMEKROMHENE",
     name: "Barima Dr. Nana Yaw Annor",
@@ -871,8 +863,16 @@ export const DEFAULT_LEADERS = [
     bio: "Barima Dr. Nana Yaw Annor is both the Nkosuohene (Development Chief) of the New Juaben Traditional Area and the Chief of Nyamekrom. He has prioritized structural development, bringing advanced public infrastructure projects, agricultural cooperatives, tech-driven modern classrooms, and clean-water systems to fruition."
   },
   {
+    id: "hemaa",
+    role: "NEW JUABENG HEMAA",
+    name: "Nana Juaben Serwaa III",
+    title: "Queen Mother of New Juaben Traditional Area",
+    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400",
+    bio: "The venerable Queen Mother, actively championing female socio-economic empowerment, youth vocational guilds, and infant healthcare sanitation projects."
+  },
+  {
     id: "nkosuo_hemaa",
-    role: "NEW JUABEN NKOSUO HEMAA",
+    role: "Nyamekrom HEMAA",
     name: "Nana Afia Boatemaa II",
     title: "Development Queen Mother of New Juaben Traditional Area",
     avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400",

@@ -868,6 +868,29 @@ export default function AdminDashboard({
     });
   };
 
+  const handleClearAll = (type: 'projects' | 'events') => {
+    setConfirmDialog({
+      title: `Clear All Published ${type === 'projects' ? 'Projects' : 'Events'}`,
+      message: `Are you absolutely sure you want to permanently clear and delete ALL published ${type}? This action will wipe all records from the registry and cannot be undone.`,
+      onConfirm: async () => {
+        if (type === 'projects') {
+          setProjects([]);
+          triggerStorageUpdate('projects', []);
+        } else if (type === 'events') {
+          setEvents([]);
+          triggerStorageUpdate('events', []);
+        }
+        
+        // Ensure database is marked as seeded/initialized so defaults are not reloaded on refresh
+        supabaseService.setSetting('database_seeded', true);
+        localStorage.setItem('new_juaben_database_seeded', 'true');
+        
+        showSuccessFeedback(`Successfully cleared all published ${type}.`);
+        setConfirmDialog(null);
+      }
+    });
+  };
+
   // Citizen Feed management
   const handleToggleReadFeedback = (id: string) => {
     let message = '';
@@ -1808,9 +1831,25 @@ export default function AdminDashboard({
 
               {/* Published items manager */}
               <div className="space-y-4">
-                <h3 className="text-sm font-sans font-black text-neutral-200 uppercase tracking-wider">
-                  Manage Published Projects ({projects.length})
-                </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-neutral-900/50 p-4 rounded-xl border border-neutral-800">
+                  <div>
+                    <h3 className="text-sm font-sans font-black text-neutral-200 uppercase tracking-wider">
+                      Manage Published Projects ({projects.length})
+                    </h3>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">
+                      View, edit, or clear active developmental projects published on the portal registry.
+                    </p>
+                  </div>
+                  {projects.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearAll('projects')}
+                      className="px-4 py-2 bg-red-950/45 hover:bg-[#990000] text-[#ff6b6b] hover:text-white text-[10px] font-sans font-black uppercase tracking-wider border border-red-800/40 hover:border-red-600 rounded transition-all cursor-pointer shadow-md"
+                    >
+                      Clear All Projects
+                    </button>
+                  )}
+                </div>
                 
                 <div className="border border-neutral-800 rounded-xl overflow-hidden bg-neutral-900/40">
                   <table className="w-full text-left text-xs font-sans border-collapse">
@@ -2199,9 +2238,25 @@ export default function AdminDashboard({
 
               {/* Event Manager lists */}
               <div className="space-y-4">
-                <h3 className="text-sm font-sans font-black text-neutral-200 uppercase tracking-wider">
-                  Manage Announced Events ({events.length})
-                </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-neutral-900/50 p-4 rounded-xl border border-neutral-800">
+                  <div>
+                    <h3 className="text-sm font-sans font-black text-neutral-200 uppercase tracking-wider">
+                      Manage Announced Events ({events.length})
+                    </h3>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">
+                      View, edit, or clear active royal announcements and developmental events.
+                    </p>
+                  </div>
+                  {events.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearAll('events')}
+                      className="px-4 py-2 bg-red-950/45 hover:bg-[#990000] text-[#ff6b6b] hover:text-white text-[10px] font-sans font-black uppercase tracking-wider border border-red-800/40 hover:border-red-600 rounded transition-all cursor-pointer shadow-md"
+                    >
+                      Clear All Events
+                    </button>
+                  )}
+                </div>
                 
                 <div className="border border-neutral-800 rounded-xl overflow-hidden bg-neutral-900/40">
                   <table className="w-full text-left text-xs font-sans border-collapse">

@@ -16,6 +16,17 @@ const LEADER_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function Leaders({ traditionalLeaders }: LeadersProps) {
+  const PREFERRED_ORDER = ["paramount_chief", "nkosuo_hene", "hemaa", "nkosuo_hemaa"];
+
+  const sortedLeaders = [...traditionalLeaders].sort((a, b) => {
+    const indexA = PREFERRED_ORDER.indexOf(a.id);
+    const indexB = PREFERRED_ORDER.indexOf(b.id);
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return 0;
+  });
+
   return (
     <section id="traditional-leaders" className="py-24 bg-black border-t border-neutral-900 relative overflow-hidden">
       {/* Decorative Traditional Backdrop Accent */}
@@ -35,8 +46,8 @@ export default function Leaders({ traditionalLeaders }: LeadersProps) {
         </div>
 
         {/* Leaders Grid */}
-        <div className={`grid grid-cols-1 md:grid-cols-2 ${traditionalLeaders.length === 3 ? 'lg:grid-cols-3 max-w-5xl mx-auto' : 'lg:grid-cols-4'} gap-8`}>
-          {traditionalLeaders.map((leader, index) => (
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${sortedLeaders.length === 3 ? 'lg:grid-cols-3 max-w-5xl mx-auto' : 'lg:grid-cols-4'} gap-8`}>
+          {sortedLeaders.map((leader, index) => (
             <motion.div
               key={leader.id}
               initial={{ opacity: 0, y: 30 }}

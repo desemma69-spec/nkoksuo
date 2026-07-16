@@ -275,8 +275,7 @@ export default function App() {
       if (savedCommunities) {
         try {
           const parsed = JSON.parse(savedCommunities);
-          const hasSouth = Array.isArray(parsed) && parsed.some((c: any) => c && c.id === 'new_juaben_south');
-          if (!Array.isArray(parsed) || !hasSouth || parsed.length < COMMUNITIES_DATA.length) {
+          if (!Array.isArray(parsed)) {
             setCommunities(COMMUNITIES_DATA);
             localStorage.setItem('new_juaben_communities_data', JSON.stringify(COMMUNITIES_DATA));
           } else {
@@ -313,8 +312,7 @@ export default function App() {
       if (savedProjects) {
         try {
           const parsed = JSON.parse(savedProjects);
-          const hasNewSouthProj = Array.isArray(parsed) && parsed.some((p: any) => p && p.communityId === 'new_juaben_south');
-          if (!Array.isArray(parsed) || !hasNewSouthProj || parsed.length < PROJECTS_DATA.length) {
+          if (!Array.isArray(parsed)) {
             setProjects(PROJECTS_DATA);
             localStorage.setItem('new_juaben_nkosuo_projects', JSON.stringify(PROJECTS_DATA));
           } else {
@@ -391,16 +389,14 @@ export default function App() {
         try {
           const parsed = JSON.parse(savedLeaders);
           if (Array.isArray(parsed)) {
-            const filtered = parsed.filter((l: any) => l && l.id !== 'chief_nyamekrom');
-            if (filtered.length <= 3) {
-              setTraditionalLeaders(DEFAULT_LEADERS);
-              localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(DEFAULT_LEADERS));
-            } else {
-              setTraditionalLeaders(filtered);
-              if (filtered.length !== parsed.length) {
-                localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(filtered));
+            const migrated = parsed.map((l: any) => {
+              if (l && l.id === 'nkosuo_hemaa' && l.role === 'NEW JUABEN NKOSUO HEMAA') {
+                return { ...l, role: 'Nyamekrom HEMAA' };
               }
-            }
+              return l;
+            });
+            setTraditionalLeaders(migrated);
+            localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(migrated));
           } else {
             setTraditionalLeaders(DEFAULT_LEADERS);
             localStorage.setItem('new_juaben_traditional_leaders', JSON.stringify(DEFAULT_LEADERS));
@@ -437,11 +433,11 @@ export default function App() {
       if (savedAdvisoryBoard) {
         try {
           const parsed = JSON.parse(savedAdvisoryBoard);
-          if (Array.isArray(parsed) && parsed.length <= 3) {
+          if (Array.isArray(parsed)) {
+            setAdvisoryBoard(parsed);
+          } else {
             setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
             localStorage.setItem('new_juaben_advisory_board', JSON.stringify(DEFAULT_ADVISORY_BOARD));
-          } else {
-            setAdvisoryBoard(parsed);
           }
         } catch (e) {
           setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
@@ -477,6 +473,8 @@ export default function App() {
         setSupabaseStatus('connected');
         try {
           // 1. Fetch dynamic settings
+          const remoteSeeded = await supabaseService.getSetting('database_seeded', false);
+          const databaseSeededVal = remoteSeeded || localStorage.getItem('new_juaben_database_seeded') === 'true';
           const logoTextVal = await supabaseService.getSetting('logo_text', 'Nkosuo Division New Juaben Traditional Area');
           const logoSubtextVal = await supabaseService.getSetting('logo_subtext', 'Development & Cultural Legacy');
           const logoImgUrlVal = await supabaseService.getSetting('logo_img_url', '/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg');
@@ -507,14 +505,25 @@ export default function App() {
           setHeroStats(heroStatsVal);
 
           // 2. Fetch structured collections
-          const dbCommunities = await supabaseService.getCommunities(COMMUNITIES_DATA);
-          const dbProjects = await supabaseService.getProjects(PROJECTS_DATA);
-          const dbEvents = await supabaseService.getEvents(EVENTS_DATA);
-          const dbGallery = await supabaseService.getGallery(GALLERY_ITEMS);
-          const dbProverbs = await supabaseService.getProverbs(ADINKRA_PROVERBS);
-          const dbLeaders = await supabaseService.getLeaders(DEFAULT_LEADERS);
-          const dbFeedback = await supabaseService.getFeedback(INITIAL_FEEDBACK);
-          const dbAdvisory = await supabaseService.getAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
+          const dbCommunities = await supabaseService.getCommunities(COMMUNITIES_DATA, databaseSeededVal);
+          const dbProjects = await supabaseService.getProjects(PROJECTS_DATA, databaseSeededVal);
+          const dbEvents = await supabaseService.getEvents(EVENTS_DATA, databaseSeededVal);
+          const dbGallery = await supabaseService.getGallery(GALLERY_ITEMS, databaseSeededVal);
+          const dbProverbs = await supabaseService.getProverbs(ADINKRA_PROVERBS, databaseSeededVal);
+          let dbLeaders = await supabaseService.getLeaders(DEFAULT_LEADERS, databaseSeededVal);
+          let migratedDbLeaders = false;
+          dbLeaders = dbLeaders.map((l: any) => {
+            if (l && l.id === 'nkosuo_hemaa' && l.role === 'NEW JUABEN NKOSUO HEMAA') {
+              migratedDbLeaders = true;
+              return { ...l, role: 'Nyamekrom HEMAA' };
+            }
+            return l;
+          });
+          if (migratedDbLeaders) {
+            await supabaseService.syncLeaders(dbLeaders);
+          }
+          const dbFeedback = await supabaseService.getFeedback(INITIAL_FEEDBACK, databaseSeededVal);
+          const dbAdvisory = await supabaseService.getAdvisoryBoard(DEFAULT_ADVISORY_BOARD, databaseSeededVal);
 
           setCommunities(dbCommunities);
           setProjects(dbProjects);
@@ -525,45 +534,49 @@ export default function App() {
           setFeedback(dbFeedback);
           setAdvisoryBoard(dbAdvisory);
 
-          // 3. One-time Auto-seeding check if the remote DB has 0 projects
-          if (dbProjects.length === PROJECTS_DATA.length && PROJECTS_DATA.length > 0) {
-            // Check if we already synced or if we should execute a seed check
-            const { count, error } = await supabase!
-              .from('projects')
-              .select('*', { count: 'exact', head: true });
-            
-            if (!error && count === 0) {
-              console.log('Detected fresh empty Supabase database. Auto-seeding initial Council data...');
-              await supabaseService.syncCommunities(COMMUNITIES_DATA);
-              await supabaseService.syncProjects(PROJECTS_DATA);
-              await supabaseService.syncEvents(EVENTS_DATA);
-              await supabaseService.syncGallery(GALLERY_ITEMS);
-              await supabaseService.syncLeaders(DEFAULT_LEADERS);
-              await supabaseService.syncProverbs(ADINKRA_PROVERBS);
-              await supabaseService.syncFeedback(INITIAL_FEEDBACK);
-              await supabaseService.syncAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
+          // 3. One-time Auto-seeding check if the remote DB has never been seeded
+          if (!databaseSeededVal) {
+            console.log('Detected fresh empty Supabase database. Auto-seeding initial Council data...');
+            await supabaseService.syncCommunities(COMMUNITIES_DATA);
+            await supabaseService.syncProjects(PROJECTS_DATA);
+            await supabaseService.syncEvents(EVENTS_DATA);
+            await supabaseService.syncGallery(GALLERY_ITEMS);
+            await supabaseService.syncLeaders(DEFAULT_LEADERS);
+            await supabaseService.syncProverbs(ADINKRA_PROVERBS);
+            await supabaseService.syncFeedback(INITIAL_FEEDBACK);
+            await supabaseService.syncAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
 
-              await supabaseService.setSetting('logo_text', 'Nkosuo Division New Juaben Traditional Area');
-              await supabaseService.setSetting('logo_subtext', 'Development & Cultural Legacy');
-              await supabaseService.setSetting('logo_img_url', '/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg');
-              await supabaseService.setSetting('hero_title1', 'Nkosuo Division');
-              await supabaseService.setSetting('hero_title2', 'New Juaben Traditional Area');
-              await supabaseService.setSetting('hero_subbadge', 'Modernization & Royal Heritage');
-              await supabaseService.setSetting('hero_desc', 'Led by the vision of the Omanhene, the Nkosuo (Development) Division drives rapid modernization, funding primary healthcare, building modern schools, launching agricultural cooperatives, and empowering the youth of New Juaben Traditional Area while preserving our royal ancestral legacy.');
-              await supabaseService.setSetting('hero_bg_url', '/src/assets/images/new_juaben_council_chiefs_hero_1783507779624.jpg');
-              await supabaseService.setSetting('hero_bg_position', 'center 5%');
-              await supabaseService.setSetting('contacts', DEFAULT_CONTACT_INFO);
-              await supabaseService.setSetting('hero_stats', [
-                { value: "8", label: "Divisional Communities" },
-                { value: "15+", label: "Nkosuo Projects" },
-                { value: "GH¢2.8M+", label: "Development Budget" },
-                { value: "180k+", label: "Beneficiaries Served" }
-              ]);
-            }
+            await supabaseService.setSetting('logo_text', 'Nkosuo Division New Juaben Traditional Area');
+            await supabaseService.setSetting('logo_subtext', 'Development & Cultural Legacy');
+            await supabaseService.setSetting('logo_img_url', '/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg');
+            await supabaseService.setSetting('hero_title1', 'Nkosuo Division');
+            await supabaseService.setSetting('hero_title2', 'New Juaben Traditional Area');
+            await supabaseService.setSetting('hero_subbadge', 'Modernization & Royal Heritage');
+            await supabaseService.setSetting('hero_desc', 'Led by the vision of the Omanhene, the Nkosuo (Development) Division drives rapid modernization, funding primary healthcare, building modern schools, launching agricultural cooperatives, and empowering the youth of New Juaben Traditional Area while preserving our royal ancestral legacy.');
+            await supabaseService.setSetting('hero_bg_url', '/src/assets/images/new_juaben_council_chiefs_hero_1783507779624.jpg');
+            await supabaseService.setSetting('hero_bg_position', 'center 5%');
+            await supabaseService.setSetting('contacts', DEFAULT_CONTACT_INFO);
+            await supabaseService.setSetting('hero_stats', [
+              { value: "8", label: "Divisional Communities" },
+              { value: "15+", label: "Nkosuo Projects" },
+              { value: "GH¢2.8M+", label: "Development Budget" },
+              { value: "180k+", label: "Beneficiaries Served" }
+            ]);
+            await supabaseService.setSetting('database_seeded', true);
+            localStorage.setItem('new_juaben_database_seeded', 'true');
+
+            setCommunities(COMMUNITIES_DATA);
+            setProjects(PROJECTS_DATA);
+            setEvents(EVENTS_DATA);
+            setGalleryItems(GALLERY_ITEMS);
+            setAdinkraProverbs(ADINKRA_PROVERBS);
+            setTraditionalLeaders(DEFAULT_LEADERS);
+            setFeedback(INITIAL_FEEDBACK);
+            setAdvisoryBoard(DEFAULT_ADVISORY_BOARD);
           }
 
         } catch (err) {
-          console.error('Failed to load from Supabase, falling back to localStorage', err);
+          console.warn('Failed to load from Supabase, falling back to localStorage', err);
           setSupabaseStatus('error');
           loadLocalFallback();
         } finally {
@@ -639,7 +652,7 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.3 }}
             >
-              <Communities communities={communities.length > 0 ? communities : COMMUNITIES_DATA} projects={projects} events={events} />
+              <Communities communities={communities} projects={projects} events={events} />
             </motion.div>
           )}
 
@@ -651,7 +664,7 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.3 }}
             >
-              <Projects projects={projects} />
+              <Projects projects={projects} communities={communities} />
             </motion.div>
           )}
 
@@ -688,7 +701,7 @@ export default function App() {
               transition={{ duration: 0.3 }}
             >
               <CommunityFeedback 
-                communities={communities.length > 0 ? communities : COMMUNITIES_DATA} 
+                communities={communities} 
                 onSubmitFeedback={(newFb) => {
                   const updated = [newFb, ...feedback];
                   setFeedback(updated);
@@ -731,48 +744,88 @@ export default function App() {
           isDbLoading={isDbLoading}
           supabaseStatus={supabaseStatus}
           feedback={feedback}
-          setFeedback={(newFeedback) => {
+          setFeedback={async (newFeedback) => {
             const resolved = typeof newFeedback === 'function' ? (newFeedback as any)(feedback) : newFeedback;
             setFeedback(resolved);
             localStorage.setItem('new_juaben_nkosuo_feedback', JSON.stringify(resolved));
             if (isSupabaseConfigured()) {
-              supabaseService.syncFeedback(resolved);
+              try {
+                const deleted = feedback.filter(f => !resolved.some(r => r.id === f.id));
+                if (deleted.length > 0) {
+                  await Promise.all(deleted.map(f => supabaseService.deleteFeedback(f.id)));
+                }
+                await supabaseService.syncFeedback(resolved);
+              } catch (err) {
+                console.warn('Failed to sync feedback to Supabase:', err);
+              }
             }
           }}
           projects={projects}
-          setProjects={(newProjects) => {
+          setProjects={async (newProjects) => {
             const resolved = typeof newProjects === 'function' ? (newProjects as any)(projects) : newProjects;
             setProjects(resolved);
             localStorage.setItem('new_juaben_nkosuo_projects', JSON.stringify(resolved));
             if (isSupabaseConfigured()) {
-              supabaseService.syncProjects(resolved);
+              try {
+                const deleted = projects.filter(p => !resolved.some(r => r.id === p.id));
+                if (deleted.length > 0) {
+                  await Promise.all(deleted.map(p => supabaseService.deleteProject(p.id)));
+                }
+                await supabaseService.syncProjects(resolved);
+              } catch (err) {
+                console.warn('Failed to sync projects to Supabase:', err);
+              }
             }
           }}
           events={events}
-          setEvents={(newEvents) => {
+          setEvents={async (newEvents) => {
             const resolved = typeof newEvents === 'function' ? (newEvents as any)(events) : newEvents;
             setEvents(resolved);
             localStorage.setItem('new_juaben_nkosuo_events', JSON.stringify(resolved));
             if (isSupabaseConfigured()) {
-              supabaseService.syncEvents(resolved);
+              try {
+                const deleted = events.filter(e => !resolved.some(r => r.id === e.id));
+                if (deleted.length > 0) {
+                  await Promise.all(deleted.map(e => supabaseService.deleteEvent(e.id)));
+                }
+                await supabaseService.syncEvents(resolved);
+              } catch (err) {
+                console.warn('Failed to sync events to Supabase:', err);
+              }
             }
           }}
           galleryItems={galleryItems}
-          setGalleryItems={(newItems) => {
+          setGalleryItems={async (newItems) => {
             const resolved = typeof newItems === 'function' ? (newItems as any)(galleryItems) : newItems;
             setGalleryItems(resolved);
             localStorage.setItem('new_juaben_nkosuo_gallery', JSON.stringify(resolved));
             if (isSupabaseConfigured()) {
-              supabaseService.syncGallery(resolved);
+              try {
+                const deleted = galleryItems.filter(g => !resolved.some(r => r.id === g.id));
+                if (deleted.length > 0) {
+                  await Promise.all(deleted.map(g => supabaseService.deleteGalleryItem(g.id)));
+                }
+                await supabaseService.syncGallery(resolved);
+              } catch (err) {
+                console.warn('Failed to sync gallery items to Supabase:', err);
+              }
             }
           }}
           adinkraProverbs={adinkraProverbs}
-          setAdinkraProverbs={(newProverbs) => {
+          setAdinkraProverbs={async (newProverbs) => {
             const resolved = typeof newProverbs === 'function' ? (newProverbs as any)(adinkraProverbs) : newProverbs;
             setAdinkraProverbs(resolved);
             localStorage.setItem('new_juaben_adinkra_proverbs', JSON.stringify(resolved));
             if (isSupabaseConfigured()) {
-              supabaseService.syncProverbs(resolved);
+              try {
+                const deleted = adinkraProverbs.filter(p => !resolved.some(r => r.symbol === p.symbol));
+                if (deleted.length > 0) {
+                  await Promise.all(deleted.map(p => supabaseService.deleteProverb(p.symbol)));
+                }
+                await supabaseService.syncProverbs(resolved);
+              } catch (err) {
+                console.warn('Failed to sync proverbs to Supabase:', err);
+              }
             }
           }}
           heroBgUrl={heroBgUrl}
@@ -793,13 +846,21 @@ export default function App() {
               supabaseService.syncLeaders(resolved);
             }
           }}
-          communities={communities.length > 0 ? communities : COMMUNITIES_DATA}
-          setCommunities={(newComms) => {
+          communities={communities}
+          setCommunities={async (newComms) => {
             const resolved = typeof newComms === 'function' ? (newComms as any)(communities) : newComms;
             setCommunities(resolved);
             localStorage.setItem('new_juaben_communities_data', JSON.stringify(resolved));
             if (isSupabaseConfigured()) {
-              supabaseService.syncCommunities(resolved);
+              try {
+                const deleted = communities.filter(c => !resolved.some(r => r.id === c.id));
+                if (deleted.length > 0) {
+                  await Promise.all(deleted.map(c => supabaseService.deleteCommunity(c.id)));
+                }
+                await supabaseService.syncCommunities(resolved);
+              } catch (err) {
+                console.warn('Failed to sync communities to Supabase:', err);
+              }
             }
           }}
           logoText={logoText}
@@ -879,6 +940,8 @@ export default function App() {
             setAdvisoryBoard(val);
             localStorage.setItem('new_juaben_advisory_board', JSON.stringify(val));
             if (isSupabaseConfigured()) {
+              const deleted = advisoryBoard.filter(m => !val.some(r => r.id === m.id));
+              deleted.forEach(m => supabaseService.deleteAdvisoryMember(m.id));
               supabaseService.syncAdvisoryBoard(val);
             }
           }}

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { PROJECTS_DATA, COMMUNITIES_DATA } from '../data';
-import { Project, ProjectCategory, ProjectStatus } from '../types';
+import { Project, ProjectCategory, ProjectStatus, Community } from '../types';
 import VideoPlayer from './VideoPlayer';
 import {
   Search,
@@ -26,9 +26,10 @@ import {
 
 interface ProjectsProps {
   projects?: Project[];
+  communities?: Community[];
 }
 
-export default function Projects({ projects = PROJECTS_DATA }: ProjectsProps) {
+export default function Projects({ projects = PROJECTS_DATA, communities = COMMUNITIES_DATA }: ProjectsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCommunity, setSelectedCommunity] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -233,7 +234,7 @@ export default function Projects({ projects = PROJECTS_DATA }: ProjectsProps) {
                 className="w-full bg-[#111111] border border-neutral-800 rounded px-3 py-3 text-xs text-neutral-300 focus:outline-none focus:border-[#D4AF37] cursor-pointer"
               >
                 <option value="all">All Communities</option>
-                {COMMUNITIES_DATA.map((c) => (
+                {communities.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
