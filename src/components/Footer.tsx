@@ -43,7 +43,10 @@ export default function Footer({ onNavigate, logoText, logoSubtext, logoImgUrl, 
                   src={logoImgUrl} 
                   alt="Logo" 
                   className="w-full h-full object-contain rounded" 
-                  referrerPolicy="no-referrer" 
+                  referrerPolicy="no-referrer"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
                 />
               ) : (
                 <Shield className="w-5 h-5 text-[#990000]" />

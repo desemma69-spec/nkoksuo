@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { COMMUNITIES_DATA, PROJECTS_DATA, EVENTS_DATA } from '../data';
 import { 
   Award, 
@@ -14,15 +14,17 @@ import {
   Calendar, 
   MapPin, 
   Coins,
-  Sparkles
+  Sparkles,
+  X,
+  Eye,
+  FileText,
+  Printer,
+  ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { Project, Event as RoyalEvent } from '../types';
+import { Project, Event as RoyalEvent, Community, ChiefProfile, QueenProfile } from '../types';
 import VideoPlayer from './VideoPlayer';
-
-import { useEffect } from 'react';
-import { Community } from '../types';
 
 interface CommunitiesProps {
   communities?: Community[];
@@ -37,7 +39,34 @@ export default function Communities({
 }: CommunitiesProps) {
   const [selectedCommunityId, setSelectedCommunityId] = useState<string>('');
   const [activeSubTab, setActiveSubTab] = useState<'leaders' | 'projects' | 'events'>('leaders');
+  
+  // State for Royal Profile Modal Page
+  const [selectedRoyalProfile, setSelectedRoyalProfile] = useState<{
+    type: 'chief' | 'queen';
+    profile: ChiefProfile | QueenProfile;
+    communityName: string;
+  } | null>(null);
+
   const tabsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Lock body scroll and handle Escape key for Royal Profile Modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedRoyalProfile(null);
+      }
+    };
+    if (selectedRoyalProfile) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedRoyalProfile]);
 
   useEffect(() => {
     if (communities && communities.length > 0) {
@@ -239,169 +268,205 @@ export default function Communities({
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
                   
                   {/* CHIEF CARD SECTION */}
-                  <div className="bg-[#111111]/60 border border-neutral-800/80 rounded-xl p-6 sm:p-8 relative hover:border-[#D4AF37]/30 transition-all duration-300">
-                    <span className="absolute top-4 right-4 text-[10px] font-mono text-[#D4AF37]/50 uppercase tracking-widest bg-[#D4AF37]/5 border border-[#D4AF37]/20 px-2.5 py-1 rounded">
-                      Divisional Chief
-                    </span>
-                    
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6">
-                      <div className="relative w-28 h-35 sm:w-32 sm:h-40 rounded overflow-hidden border border-neutral-800 shadow-lg flex-shrink-0">
-                        <img 
-                          src={chief.avatarUrl} 
-                          alt={chief.name}
-                          className="w-full h-full object-cover object-center grayscale hover:grayscale-0 transition-all duration-300"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-[#990000] text-white font-black text-[7px] tracking-widest uppercase rounded-bl">
-                          EST. {chief.stooledYear}
+                  <div 
+                    onClick={() => setSelectedRoyalProfile({ type: 'chief', profile: chief, communityName: activeCommunity.name })}
+                    className="bg-[#111111]/60 border border-neutral-800/80 rounded-xl p-6 sm:p-8 relative hover:border-[#D4AF37] transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <span className="absolute top-4 right-4 text-xs font-mono text-[#D4AF37]/80 uppercase tracking-widest bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-2.5 py-1 rounded font-bold">
+                        Divisional Chief
+                      </span>
+                      
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6">
+                        <div className="relative w-28 h-35 sm:w-32 sm:h-40 rounded overflow-hidden border-2 border-neutral-800 group-hover:border-[#D4AF37] shadow-lg flex-shrink-0 transition-colors">
+                          <img 
+                            src={chief.avatarUrl} 
+                            alt={chief.name}
+                            className="w-full h-full object-cover object-center grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-300"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-[#990000] text-white font-black text-xs tracking-widest uppercase rounded-bl">
+                            EST. {chief.stooledYear}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <span className="text-[10px] font-sans font-black text-[#990000] tracking-[0.2em] uppercase block mb-1">
-                          {chief.title}
-                        </span>
-                        <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight">
-                          {chief.name}
-                        </h3>
-                        <p className="text-[11px] font-sans font-bold text-[#D4AF37] tracking-widest uppercase mt-1">
-                          Reign Name: {chief.reignTitle}
-                        </p>
-                        <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">
-                          <span className="text-[9px] font-mono text-neutral-400 bg-black/60 px-2 py-1 rounded border border-neutral-900 flex items-center">
-                            <Clock className="w-3 h-3 mr-1.5 text-[#990000]" />
-                            Reign: {new Date().getFullYear() - parseInt(chief.stooledYear)} Yrs
+                        <div className="text-center sm:text-left">
+                          <span className="text-xs font-sans font-black text-[#990000] tracking-[0.2em] uppercase block mb-1">
+                            {chief.title}
                           </span>
+                          <h3 className="text-xl sm:text-2xl font-display font-black text-white group-hover:text-[#D4AF37] uppercase tracking-tight transition-colors">
+                            {chief.name}
+                          </h3>
+                          <p className="text-xs font-sans font-bold text-[#D4AF37] tracking-widest uppercase mt-1">
+                            Reign Name: {chief.reignTitle}
+                          </p>
+                          <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">
+                            <span className="text-xs font-mono text-neutral-400 bg-black/60 px-2.5 py-1 rounded border border-neutral-900 flex items-center">
+                              <Clock className="w-3.5 h-3.5 mr-1.5 text-[#990000]" />
+                              Reign: {new Date().getFullYear() - parseInt(chief.stooledYear)} Yrs
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-5">
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-sans font-black text-[#D4AF37] uppercase tracking-[0.15em] mb-2 border-l-2 border-[#990000] pl-2">
+                            Biography
+                          </h4>
+                          <p className="text-neutral-100 text-xs sm:text-sm font-medium leading-relaxed font-sans line-clamp-3">{chief.bio}</p>
+                        </div>
+
+                        <div className="p-4 bg-[#990000]/20 border-l-2 border-[#D4AF37] rounded">
+                          <h5 className="text-xs sm:text-sm font-sans font-black text-[#D4AF37] tracking-[0.15em] uppercase mb-1 flex items-center">
+                            <ShieldCheck className="w-4 h-4 mr-1.5 text-[#D4AF37]" /> Developmental Vision
+                          </h5>
+                          <p className="text-xs sm:text-sm font-sans text-neutral-100 font-medium leading-relaxed italic line-clamp-2">&ldquo;{chief.vision}&rdquo;</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-neutral-800/80">
+                          <div>
+                            <h5 className="text-xs sm:text-sm font-sans font-black text-white uppercase tracking-[0.15em] mb-2 flex items-center">
+                              <BookOpen className="w-4 h-4 mr-1.5 text-red-500" /> Education
+                            </h5>
+                            <ul className="space-y-1.5 text-xs sm:text-sm text-neutral-200 font-bold font-sans">
+                              {chief.education.slice(0, 2).map((edu, idx) => (
+                                <li key={idx} className="flex items-start">
+                                  <span className="text-[#D4AF37] mr-1.5">•</span>
+                                  <span className="truncate">{edu}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <h5 className="text-xs sm:text-sm font-sans font-black text-[#D4AF37] uppercase tracking-[0.15em] mb-2 flex items-center">
+                              <Award className="w-4 h-4 mr-1.5 text-[#D4AF37]" /> Key Milestones
+                            </h5>
+                            <ul className="space-y-1.5 text-xs sm:text-sm text-neutral-200 font-bold font-sans">
+                              {chief.achievements.slice(0, 2).map((ach, idx) => (
+                                <li key={idx} className="flex items-start">
+                                  <span className="text-emerald-400 mr-1.5">✓</span>
+                                  <span className="truncate">{ach}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-5">
-                      <div>
-                        <h4 className="text-[10px] font-sans font-black text-neutral-400 uppercase tracking-[0.15em] mb-2 border-l-2 border-[#990000] pl-2">
-                          Biography
-                        </h4>
-                        <p className="text-neutral-300 text-xs sm:text-sm leading-relaxed font-sans">{chief.bio}</p>
-                      </div>
-
-                      <div className="p-4 bg-[#990000]/10 border-l-2 border-[#D4AF37] rounded">
-                        <h5 className="text-[9px] font-sans font-black text-[#D4AF37] tracking-[0.15em] uppercase mb-1 flex items-center">
-                          <ShieldCheck className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" /> Developmental Vision
-                        </h5>
-                        <p className="text-xs font-sans text-neutral-300 leading-relaxed italic">&ldquo;{chief.vision}&rdquo;</p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-neutral-800/60">
-                        <div>
-                          <h5 className="text-[9px] font-sans font-black text-neutral-400 uppercase tracking-[0.15em] mb-2 flex items-center">
-                            <BookOpen className="w-3.5 h-3.5 mr-1.5 text-red-500" /> Education
-                          </h5>
-                          <ul className="space-y-1.5 text-xs text-neutral-400 font-sans">
-                            {chief.education.map((edu, idx) => (
-                              <li key={idx} className="flex items-start">
-                                <span className="text-[#D4AF37] mr-1.5">•</span>
-                                <span>{edu}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <h5 className="text-[9px] font-sans font-black text-[#D4AF37] uppercase tracking-[0.15em] mb-2 flex items-center">
-                            <Award className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" /> Key Milestones
-                          </h5>
-                          <ul className="space-y-1.5 text-xs text-neutral-400 font-sans">
-                            {chief.achievements.map((ach, idx) => (
-                              <li key={idx} className="flex items-start">
-                                <span className="text-emerald-500 mr-1.5">✓</span>
-                                <span>{ach}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
+                    {/* CTA Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRoyalProfile({ type: 'chief', profile: chief, communityName: activeCommunity.name });
+                      }}
+                      className="mt-6 w-full py-3 px-4 bg-[#990000]/20 hover:bg-[#990000] border border-[#D4AF37]/40 hover:border-[#D4AF37] text-[#D4AF37] hover:text-white font-sans font-black text-xs uppercase tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn cursor-pointer shadow-md"
+                    >
+                      <Eye className="w-4 h-4 text-[#D4AF37] group-hover/btn:text-white" />
+                      <span>Read Full Chief Profile Page</span>
+                      <ArrowRight className="w-4 h-4 text-[#D4AF37] group-hover/btn:text-white group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
                   </div>
 
                   {/* QUEEN MOTHER CARD SECTION */}
-                  <div className="bg-[#111111]/60 border border-neutral-800/80 rounded-xl p-6 sm:p-8 relative hover:border-[#D4AF37]/30 transition-all duration-300">
-                    <span className="absolute top-4 right-4 text-[10px] font-mono text-[#D4AF37]/50 uppercase tracking-widest bg-[#D4AF37]/5 border border-[#D4AF37]/20 px-2.5 py-1 rounded">
-                      Divisional Queen Mother
-                    </span>
-                    
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6">
-                      <div className="relative w-28 h-35 sm:w-32 sm:h-40 rounded overflow-hidden border border-neutral-800 shadow-lg flex-shrink-0">
-                        <img 
-                          src={queen.avatarUrl} 
-                          alt={queen.name}
-                          className="w-full h-full object-cover object-center grayscale hover:grayscale-0 transition-all duration-300"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-[#990000] text-white font-black text-[7px] tracking-widest uppercase rounded-bl">
-                          EST. {queen.enstooledYear}
+                  <div 
+                    onClick={() => setSelectedRoyalProfile({ type: 'queen', profile: queen, communityName: activeCommunity.name })}
+                    className="bg-[#111111]/60 border border-neutral-800/80 rounded-xl p-6 sm:p-8 relative hover:border-[#D4AF37] transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <span className="absolute top-4 right-4 text-xs font-mono text-[#D4AF37]/80 uppercase tracking-widest bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-2.5 py-1 rounded font-bold">
+                        Divisional Queen Mother
+                      </span>
+                      
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6">
+                        <div className="relative w-28 h-35 sm:w-32 sm:h-40 rounded overflow-hidden border-2 border-neutral-800 group-hover:border-[#D4AF37] shadow-lg flex-shrink-0 transition-colors">
+                          <img 
+                            src={queen.avatarUrl} 
+                            alt={queen.name}
+                            className="w-full h-full object-cover object-center grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-300"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-[#990000] text-white font-black text-xs tracking-widest uppercase rounded-bl">
+                            EST. {queen.enstooledYear}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <span className="text-[10px] font-sans font-black text-[#990000] tracking-[0.2em] uppercase block mb-1">
-                          {queen.title}
-                        </span>
-                        <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight">
-                          {queen.name}
-                        </h3>
-                        <p className="text-[11px] font-sans font-bold text-[#D4AF37] tracking-widest uppercase mt-1">
-                          Reign Name: {queen.reignTitle}
-                        </p>
-                        <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">
-                          <span className="text-[9px] font-mono text-neutral-400 bg-black/60 px-2 py-1 rounded border border-neutral-900 flex items-center">
-                            <Clock className="w-3 h-3 mr-1.5 text-[#990000]" />
-                            Reign: {new Date().getFullYear() - parseInt(queen.enstooledYear)} Yrs
+                        <div className="text-center sm:text-left">
+                          <span className="text-xs font-sans font-black text-[#990000] tracking-[0.2em] uppercase block mb-1">
+                            {queen.title}
                           </span>
+                          <h3 className="text-xl sm:text-2xl font-display font-black text-white group-hover:text-[#D4AF37] uppercase tracking-tight transition-colors">
+                            {queen.name}
+                          </h3>
+                          <p className="text-xs font-sans font-bold text-[#D4AF37] tracking-widest uppercase mt-1">
+                            Reign Name: {queen.reignTitle}
+                          </p>
+                          <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2">
+                            <span className="text-xs font-mono text-neutral-400 bg-black/60 px-2.5 py-1 rounded border border-neutral-900 flex items-center">
+                              <Clock className="w-3.5 h-3.5 mr-1.5 text-[#990000]" />
+                              Reign: {new Date().getFullYear() - parseInt(queen.enstooledYear)} Yrs
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-5">
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-sans font-black text-[#D4AF37] uppercase tracking-[0.15em] mb-2 border-l-2 border-[#990000] pl-2">
+                            Biography
+                          </h4>
+                          <p className="text-neutral-100 text-xs sm:text-sm font-medium leading-relaxed font-sans line-clamp-3">{queen.bio}</p>
+                        </div>
+
+                        <div className="p-4 bg-[#990000]/20 border-l-2 border-[#D4AF37] rounded">
+                          <h5 className="text-xs sm:text-sm font-sans font-black text-[#D4AF37] tracking-[0.15em] uppercase mb-1 flex items-center">
+                            <Sparkles className="w-4 h-4 mr-1.5 text-[#D4AF37]" /> Queen Mother&apos;s Advocacy
+                          </h5>
+                          <p className="text-xs sm:text-sm font-sans text-neutral-100 font-medium leading-relaxed italic line-clamp-2">&ldquo;{queen.vision}&rdquo;</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-neutral-800/80">
+                          <div>
+                            <h5 className="text-xs sm:text-sm font-sans font-black text-white uppercase tracking-[0.15em] mb-2 flex items-center">
+                              <BookOpen className="w-4 h-4 mr-1.5 text-red-500" /> Education
+                            </h5>
+                            <ul className="space-y-1.5 text-xs sm:text-sm text-neutral-200 font-bold font-sans">
+                              {queen.education.slice(0, 2).map((edu, idx) => (
+                                <li key={idx} className="flex items-start">
+                                  <span className="text-[#D4AF37] mr-1.5">•</span>
+                                  <span className="truncate">{edu}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <h5 className="text-xs sm:text-sm font-sans font-black text-[#D4AF37] uppercase tracking-[0.15em] mb-2 flex items-center">
+                              <Award className="w-4 h-4 mr-1.5 text-[#D4AF37]" /> Stool Accomplishments
+                            </h5>
+                            <ul className="space-y-1.5 text-xs sm:text-sm text-neutral-200 font-bold font-sans">
+                              {queen.achievements.slice(0, 2).map((ach, idx) => (
+                                <li key={idx} className="flex items-start">
+                                  <span className="text-emerald-400 mr-1.5">✓</span>
+                                  <span className="truncate">{ach}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-5">
-                      <div>
-                        <h4 className="text-[10px] font-sans font-black text-neutral-400 uppercase tracking-[0.15em] mb-2 border-l-2 border-[#990000] pl-2">
-                          Biography
-                        </h4>
-                        <p className="text-neutral-300 text-xs sm:text-sm leading-relaxed font-sans">{queen.bio}</p>
-                      </div>
-
-                      <div className="p-4 bg-[#990000]/10 border-l-2 border-[#D4AF37] rounded">
-                        <h5 className="text-[9px] font-sans font-black text-[#D4AF37] tracking-[0.15em] uppercase mb-1 flex items-center">
-                          <Sparkles className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" /> Queen Mother&apos;s Advocacy
-                        </h5>
-                        <p className="text-xs font-sans text-neutral-300 leading-relaxed italic">&ldquo;{queen.vision}&rdquo;</p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-neutral-800/60">
-                        <div>
-                          <h5 className="text-[9px] font-sans font-black text-neutral-400 uppercase tracking-[0.15em] mb-2 flex items-center">
-                            <BookOpen className="w-3.5 h-3.5 mr-1.5 text-red-500" /> Education
-                          </h5>
-                          <ul className="space-y-1.5 text-xs text-neutral-400 font-sans">
-                            {queen.education.map((edu, idx) => (
-                              <li key={idx} className="flex items-start">
-                                <span className="text-[#D4AF37] mr-1.5">•</span>
-                                <span>{edu}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <h5 className="text-[9px] font-sans font-black text-[#D4AF37] uppercase tracking-[0.15em] mb-2 flex items-center">
-                            <Award className="w-3.5 h-3.5 mr-1.5 text-[#D4AF37]" /> Stool Accomplishments
-                          </h5>
-                          <ul className="space-y-1.5 text-xs text-neutral-400 font-sans">
-                            {queen.achievements.map((ach, idx) => (
-                              <li key={idx} className="flex items-start">
-                                <span className="text-emerald-500 mr-1.5">✓</span>
-                                <span>{ach}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
+                    {/* CTA Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRoyalProfile({ type: 'queen', profile: queen, communityName: activeCommunity.name });
+                      }}
+                      className="mt-6 w-full py-3 px-4 bg-[#990000]/20 hover:bg-[#990000] border border-[#D4AF37]/40 hover:border-[#D4AF37] text-[#D4AF37] hover:text-white font-sans font-black text-xs uppercase tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn cursor-pointer shadow-md"
+                    >
+                      <Eye className="w-4 h-4 text-[#D4AF37] group-hover/btn:text-white" />
+                      <span>Read Full Queen Mother Profile Page</span>
+                      <ArrowRight className="w-4 h-4 text-[#D4AF37] group-hover/btn:text-white group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
                   </div>
 
                 </div>
@@ -625,6 +690,208 @@ export default function Communities({
         </div>
 
       </div>
+
+      {/* FULL ROYAL LEADER PROFILE PAGE MODAL */}
+      <AnimatePresence>
+        {selectedRoyalProfile && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md overflow-y-auto"
+            onClick={() => setSelectedRoyalProfile(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="relative w-full max-w-4xl bg-[#111111] border-2 border-[#D4AF37]/60 rounded-2xl shadow-[0_10px_60px_rgba(212,175,55,0.25)] overflow-hidden my-auto max-h-[92vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Top Header Banner */}
+              <div className="bg-gradient-to-r from-neutral-950 via-[#1c140a] to-neutral-950 px-6 py-4 border-b border-[#D4AF37]/30 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-[#990000]/30 border border-[#D4AF37]/40 rounded-lg">
+                    <Crown className="w-5 h-5 text-[#D4AF37]" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#D4AF37] font-bold block">
+                      Royal Stool Profile Page • New Juaben Traditional Area
+                    </span>
+                    <span className="text-xs font-sans text-neutral-300 font-bold uppercase">
+                      {selectedRoyalProfile.communityName} Divisional Jurisdiction
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedRoyalProfile(null)}
+                  className="p-2 bg-neutral-900 hover:bg-[#990000] text-neutral-400 hover:text-white rounded-lg border border-neutral-800 transition-all cursor-pointer"
+                  title="Close Profile Page"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Scrollable Content Body */}
+              <div className="p-6 sm:p-8 overflow-y-auto space-y-8 custom-scrollbar">
+                
+                {/* Main Royal Header Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start pb-8 border-b border-neutral-800/80">
+                  {/* Portrait Frame (4 cols) */}
+                  <div className="md:col-span-4 flex flex-col items-center text-center">
+                    <div className="relative w-48 sm:w-56 aspect-[3/4] rounded-xl overflow-hidden border-2 border-[#D4AF37] shadow-[0_0_25px_rgba(212,175,55,0.2)] bg-neutral-950 flex-shrink-0">
+                      <img
+                        src={selectedRoyalProfile.profile.avatarUrl}
+                        alt={selectedRoyalProfile.profile.name}
+                        className="w-full h-full object-cover object-[center_15%]"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute top-0 right-0 px-2.5 py-1 bg-[#990000] text-white font-black text-xs tracking-widest uppercase rounded-bl-lg shadow-md">
+                        STOOLED {selectedRoyalProfile.type === 'chief' ? (selectedRoyalProfile.profile as ChiefProfile).stooledYear : (selectedRoyalProfile.profile as QueenProfile).enstooledYear}
+                      </div>
+                    </div>
+
+                    {/* Role Badge under photo */}
+                    <div className="mt-4 inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#990000]/20 border border-[#990000]/50 text-[#D4AF37] text-xs font-sans font-black uppercase tracking-widest">
+                      <ShieldCheck className="w-4 h-4 text-[#D4AF37]" />
+                      <span>
+                        {selectedRoyalProfile.type === 'chief' ? 'Divisional Chief' : 'Divisional Queen Mother'}
+                      </span>
+                    </div>
+
+                    {/* Reign duration tag */}
+                    <span className="mt-2 text-xs font-mono text-neutral-400 bg-neutral-950 px-3 py-1 rounded border border-neutral-800 flex items-center">
+                      <Clock className="w-3.5 h-3.5 mr-1.5 text-[#990000]" />
+                      Reign Duration: {new Date().getFullYear() - parseInt(selectedRoyalProfile.type === 'chief' ? (selectedRoyalProfile.profile as ChiefProfile).stooledYear : (selectedRoyalProfile.profile as QueenProfile).enstooledYear)} Years
+                    </span>
+
+                    {/* Toggle to other royal leader of same community */}
+                    {selectedRoyalProfile.type === 'chief' && queen && (
+                      <button
+                        onClick={() => setSelectedRoyalProfile({ type: 'queen', profile: queen, communityName: activeCommunity.name })}
+                        className="mt-4 w-full py-2 px-3 bg-neutral-900 hover:bg-[#1c1c1c] border border-neutral-800 text-xs font-mono text-[#D4AF37] uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>View Queen Mother Profile</span>
+                      </button>
+                    )}
+                    {selectedRoyalProfile.type === 'queen' && chief && (
+                      <button
+                        onClick={() => setSelectedRoyalProfile({ type: 'chief', profile: chief, communityName: activeCommunity.name })}
+                        className="mt-4 w-full py-2 px-3 bg-neutral-900 hover:bg-[#1c1c1c] border border-neutral-800 text-xs font-mono text-[#D4AF37] uppercase rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Crown className="w-3.5 h-3.5" />
+                        <span>View Chief Profile</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Title & Headline Info (8 cols) */}
+                  <div className="md:col-span-8 space-y-4">
+                    <div>
+                      <span className="text-xs font-sans font-black text-[#990000] tracking-[0.25em] uppercase block mb-1">
+                        {selectedRoyalProfile.profile.title}
+                      </span>
+                      <h2 className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-white uppercase tracking-tight">
+                        {selectedRoyalProfile.profile.name}
+                      </h2>
+                      <p className="text-sm font-sans font-bold text-[#D4AF37] tracking-widest uppercase mt-1">
+                        Stool Reign Name: {selectedRoyalProfile.profile.reignTitle}
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-neutral-950/80 border border-neutral-800 rounded-xl space-y-2">
+                      <div className="flex items-center text-xs font-mono text-neutral-400">
+                        <Landmark className="w-4 h-4 mr-2 text-[#D4AF37]" />
+                        <span>Traditional Jurisdiction: <strong className="text-white">{selectedRoyalProfile.communityName} Division</strong></span>
+                      </div>
+                      <div className="flex items-center text-xs font-mono text-neutral-400">
+                        <MapPin className="w-4 h-4 mr-2 text-[#990000]" />
+                        <span>Paramountcy: <strong className="text-white">New Juaben Traditional Council</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Developmental Vision Quote */}
+                    <div className="p-5 bg-gradient-to-r from-[#990000]/15 to-[#D4AF37]/10 border-l-4 border-[#D4AF37] rounded-r-xl">
+                      <h5 className="text-xs font-sans font-black text-[#D4AF37] tracking-[0.2em] uppercase mb-1.5 flex items-center">
+                        <ShieldCheck className="w-4 h-4 mr-1.5 text-[#D4AF37]" />
+                        {selectedRoyalProfile.type === 'chief' ? 'Developmental Vision' : 'Royal Advocacy Vision'}
+                      </h5>
+                      <p className="text-xs sm:text-sm text-neutral-200 leading-relaxed italic font-serif">&ldquo;{selectedRoyalProfile.profile.vision}&rdquo;</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Full Biography Narrative Section */}
+                <div className="space-y-4">
+                  <h3 className="text-sm sm:text-base font-sans font-black text-[#D4AF37] uppercase tracking-[0.2em] flex items-center border-l-2 border-[#990000] pl-3">
+                    <FileText className="w-5 h-5 mr-2 text-[#990000]" />
+                    Full Biography & Life Service
+                  </h3>
+                  <div className="p-6 bg-neutral-950/80 border border-neutral-800 rounded-xl text-white text-base sm:text-lg leading-relaxed font-sans font-normal space-y-4 shadow-sm">
+                    <p>{selectedRoyalProfile.profile.bio}</p>
+                  </div>
+                </div>
+
+                {/* Education & Accomplishments Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  {/* Educational Background */}
+                  <div className="p-6 bg-neutral-950/80 border border-neutral-800 rounded-xl space-y-3">
+                    <h4 className="text-xs sm:text-sm font-sans font-black text-white uppercase tracking-[0.15em] flex items-center border-b border-neutral-800 pb-2">
+                      <BookOpen className="w-5 h-5 mr-2 text-red-500" /> Educational Background
+                    </h4>
+                    <ul className="space-y-2 text-xs sm:text-sm text-neutral-100 font-bold font-sans">
+                      {selectedRoyalProfile.profile.education.map((edu, idx) => (
+                        <li key={idx} className="flex items-start">
+                          <span className="text-[#D4AF37] font-extrabold mr-2">0{idx + 1}.</span>
+                          <span>{edu}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Stool Milestones & Achievements */}
+                  <div className="p-6 bg-neutral-950/80 border border-neutral-800 rounded-xl space-y-3">
+                    <h4 className="text-xs sm:text-sm font-sans font-black text-[#D4AF37] uppercase tracking-[0.15em] flex items-center border-b border-neutral-800 pb-2">
+                      <Award className="w-5 h-5 mr-2 text-[#D4AF37]" /> Stool Accomplishments & Legacy
+                    </h4>
+                    <ul className="space-y-2 text-xs sm:text-sm text-neutral-100 font-bold font-sans">
+                      {selectedRoyalProfile.profile.achievements.map((ach, idx) => (
+                        <li key={idx} className="flex items-start">
+                          <span className="text-emerald-400 font-extrabold mr-2">✓</span>
+                          <span>{ach}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Modal Sticky Footer Bar */}
+              <div className="bg-neutral-950 px-6 py-4 border-t border-neutral-800 flex items-center justify-between flex-shrink-0">
+                <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest hidden sm:inline">
+                  Nkosuo Traditional Area Archives
+                </span>
+                <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white text-xs font-mono font-bold uppercase tracking-wider rounded-lg transition-all flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    <span>Print Profile</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedRoyalProfile(null)}
+                    className="px-5 py-2 bg-[#990000] hover:bg-red-800 text-white text-xs font-sans font-black uppercase tracking-wider rounded-lg transition-all shadow-md cursor-pointer"
+                  >
+                    Close Profile
+                  </button>
+                </div>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

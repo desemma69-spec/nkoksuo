@@ -66,7 +66,7 @@ export default function Leaders({ traditionalLeaders }: LeadersProps) {
                   <img
                     src={leader.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400'}
                     alt={leader.name}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover object-[center_15%] group-hover:scale-105 transition-transform duration-500"
                     referrerPolicy="no-referrer"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400';
@@ -80,23 +80,23 @@ export default function Leaders({ traditionalLeaders }: LeadersProps) {
                 </div>
 
                 {/* Role Label */}
-                <span className="text-[9px] font-sans font-black tracking-widest text-[#D4AF37] uppercase bg-amber-950/30 border border-amber-900/40 px-2 py-1 rounded inline-block mb-3">
+                <span className="text-xs sm:text-sm font-sans font-black tracking-widest text-[#D4AF37] uppercase bg-amber-950/40 border border-amber-800/60 px-3 py-1.5 rounded-lg inline-block mb-3.5 shadow-sm">
                   {leader.role}
                 </span>
 
                 {/* Name */}
-                <h3 className="text-lg font-bold text-white group-hover:text-[#D4AF37] transition-colors duration-200">
+                <h3 className="text-xl sm:text-2xl font-black text-white group-hover:text-[#D4AF37] transition-colors duration-200 uppercase tracking-tight">
                   {leader.name}
                 </h3>
 
                 {/* Title */}
-                <p className="text-[11px] text-neutral-400 font-sans mt-1.5 font-medium italic">
+                <p className="text-xs sm:text-sm text-[#D4AF37] font-sans mt-1.5 font-bold italic">
                   {leader.title}
                 </p>
               </div>
 
               {/* Bio Paragraph */}
-              <p className="text-xs text-neutral-400 font-sans mt-4 leading-relaxed border-t border-neutral-900/80 pt-4 flex-grow">
+              <p className="text-xs sm:text-sm text-neutral-100 font-medium font-sans mt-4 leading-relaxed border-t border-neutral-800 pt-4 flex-grow">
                 {leader.bio}
               </p>
             </motion.div>

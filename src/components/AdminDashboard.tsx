@@ -4630,26 +4630,26 @@ export default function AdminDashboard({
                           className="p-4 bg-neutral-950/60 border border-neutral-800 hover:border-neutral-700 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all"
                         >
                           <div className="flex items-center space-x-4 min-w-0">
-                            <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-900 border border-neutral-800 flex-shrink-0">
+                            <div className="w-14 h-16 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800 flex-shrink-0">
                               <img
                                 src={member.imageUrl}
                                 alt={member.name}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover object-[center_15%]"
                                 referrerPolicy="no-referrer"
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400';
                                 }}
                               />
                             </div>
-                            <div className="min-w-0">
-                              <h4 className="text-xs font-black text-white uppercase tracking-wide truncate">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-black text-white uppercase tracking-wide truncate break-words">
                                 {member.name}
                               </h4>
-                              <p className="text-[10px] text-[#D4AF37] font-medium mt-0.5 truncate">
+                              <p className="text-xs text-[#D4AF37] font-medium mt-0.5 truncate break-words">
                                 {member.role}
                               </p>
                               {member.organization && (
-                                <p className="text-[9px] text-neutral-500 font-mono mt-0.5 truncate uppercase">
+                                <p className="text-xs text-neutral-500 font-mono mt-0.5 truncate uppercase break-words">
                                   {member.organization}
                                 </p>
                               )}

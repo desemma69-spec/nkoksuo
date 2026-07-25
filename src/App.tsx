@@ -23,6 +23,7 @@ import Contacts from './components/Contacts';
 import { PROJECTS_DATA, EVENTS_DATA, GALLERY_ITEMS, COMMUNITIES_DATA, DEFAULT_LEADERS, INITIAL_FEEDBACK, ADINKRA_PROVERBS, DEFAULT_ADVISORY_BOARD, DEFAULT_CONTACT_INFO } from './data';
 import { Project, Event as RoyalEvent, GalleryItem, TraditionalLeader, FeedbackSubmission, AdinkraProverb, AdvisoryBoardMember, ContactInfo } from './types';
 import { isSupabaseConfigured, supabaseService, supabase } from './lib/supabase';
+import defaultLogoAsset from './assets/images/yiadom_hwedie_logo_1783587100849.jpg';
 
 
 export default function App() {
@@ -102,7 +103,7 @@ export default function App() {
   // Logo States
   const [logoText, setLogoText] = useState<string>('Nkosuo Division New Juaben Traditional Area');
   const [logoSubtext, setLogoSubtext] = useState<string>('Development & Cultural Legacy');
-  const [logoImgUrl, setLogoImgUrl] = useState<string>('/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg');
+  const [logoImgUrl, setLogoImgUrl] = useState<string>(defaultLogoAsset);
 
   // Hero Text States
   const [heroTitle1, setHeroTitle1] = useState<string>('Nkosuo Division');
@@ -213,12 +214,11 @@ export default function App() {
       }
 
       const savedLogoImgUrl = localStorage.getItem('new_juaben_logo_img_url');
-      if (savedLogoImgUrl && savedLogoImgUrl !== '') {
+      if (savedLogoImgUrl && savedLogoImgUrl !== '' && !savedLogoImgUrl.includes('/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg')) {
         setLogoImgUrl(savedLogoImgUrl);
       } else {
-        const defaultLogo = "/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg";
-        setLogoImgUrl(defaultLogo);
-        localStorage.setItem('new_juaben_logo_img_url', defaultLogo);
+        setLogoImgUrl(defaultLogoAsset);
+        localStorage.setItem('new_juaben_logo_img_url', defaultLogoAsset);
       }
 
       // Hero Text Migration
@@ -504,7 +504,7 @@ export default function App() {
           const databaseSeededVal = remoteSeeded || localStorage.getItem('new_juaben_database_seeded') === 'true';
           const logoTextVal = await supabaseService.getSetting('logo_text', 'Nkosuo Division New Juaben Traditional Area');
           const logoSubtextVal = await supabaseService.getSetting('logo_subtext', 'Development & Cultural Legacy');
-          const logoImgUrlVal = await supabaseService.getSetting('logo_img_url', '/src/assets/images/yiadom_hwedie_logo_1783587100849.jpg');
+          const logoImgUrlVal = await supabaseService.getSetting('logo_img_url', defaultLogoAsset);
           const heroTitle1Val = await supabaseService.getSetting('hero_title1', 'Nkosuo Division');
           const heroTitle2Val = await supabaseService.getSetting('hero_title2', 'New Juaben Traditional Area');
           const heroSubBadgeVal = await supabaseService.getSetting('hero_subbadge', 'Modernization & Royal Heritage');

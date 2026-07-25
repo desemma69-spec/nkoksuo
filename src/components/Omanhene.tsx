@@ -49,17 +49,17 @@ export default function Omanhene({ data = OMANHENE_DATA }: OmanheneProps) {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
                   
                   {/* Corner Block Enstooled tag (Sleek Interface style) */}
-                  <div className="absolute top-0 right-0 px-3 py-2 bg-[#D4AF37] text-black font-black text-[10px] tracking-widest uppercase rounded-bl-lg shadow-md">
+                  <div className="absolute top-0 right-0 px-3 py-2 bg-[#D4AF37] text-black font-black text-xs tracking-widest uppercase rounded-bl-lg shadow-md">
                     Enstooled {data.stooledYear}
                   </div>
                 </div>
 
                 {/* Portrait Caption */}
                 <div className="mt-4 text-center">
-                  <h3 className="text-lg font-black text-[#D4AF37] tracking-wide uppercase">
+                  <h3 className="text-xl sm:text-2xl font-black text-[#D4AF37] tracking-wide uppercase">
                     {data.name}
                   </h3>
-                  <p className="text-xs text-neutral-400 font-mono mt-1">
+                  <p className="text-xs sm:text-sm text-neutral-200 font-mono font-bold mt-1 uppercase">
                     {data.reignTitle}
                   </p>
                 </div>
@@ -69,7 +69,7 @@ export default function Omanhene({ data = OMANHENE_DATA }: OmanheneProps) {
 
           {/* Right Column: Royal Authority Details */}
           <div className="lg:col-span-7 flex flex-col justify-center">
-            <span className="text-[#D4AF37] text-xs font-black uppercase tracking-[0.2em] border-l-2 border-[#990000] pl-3 mb-3">
+            <span className="text-[#D4AF37] text-xs sm:text-sm font-black uppercase tracking-[0.2em] border-l-2 border-[#990000] pl-3 mb-3">
               Patron of Development
             </span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-black text-white uppercase leading-none">
@@ -77,21 +77,21 @@ export default function Omanhene({ data = OMANHENE_DATA }: OmanheneProps) {
             </h2>
             <div className="h-1.5 w-20 bg-[#990000] mt-4"></div>
 
-            <div className="mt-6 text-neutral-300 font-sans leading-relaxed space-y-4">
-              <p className="text-base sm:text-lg font-medium text-white italic">
+            <div className="mt-6 text-neutral-100 font-sans leading-relaxed space-y-4">
+              <p className="text-base sm:text-xl font-bold text-white italic">
                 &ldquo;Traditional governance has entered a new era. Our legacy must be defined not by the grandeur of our stools alone, but by the schools, clinics, and clean water networks we build for our citizens.&rdquo;
               </p>
-              <p className="text-sm text-neutral-400 leading-relaxed">
+              <p className="text-sm sm:text-base text-neutral-100 font-normal leading-relaxed">
                 {data.bio}
               </p>
             </div>
 
             {/* Vision Callout Box (Sleek Interface styled) */}
-            <div className="mt-8 bg-[#990000]/10 p-4 rounded-lg border border-[#990000]/30 shadow-sm">
-              <h4 className="text-xs font-sans font-black text-[#D4AF37] tracking-[0.15em] uppercase flex items-center mb-2">
-                <Eye className="w-4 h-4 text-red-500 mr-2" /> Paramount Development Vision
+            <div className="mt-8 bg-[#990000]/20 p-5 rounded-xl border border-[#990000]/50 shadow-md">
+              <h4 className="text-xs sm:text-sm font-sans font-black text-[#D4AF37] tracking-[0.15em] uppercase flex items-center mb-2">
+                <Eye className="w-5 h-5 text-red-500 mr-2" /> Paramount Development Vision
               </h4>
-              <p className="text-xs sm:text-sm font-sans text-neutral-300 leading-relaxed">
+              <p className="text-sm sm:text-base font-sans text-neutral-100 font-medium leading-relaxed">
                 {data.vision}
               </p>
             </div>

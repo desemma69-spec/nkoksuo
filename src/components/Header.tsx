@@ -89,7 +89,10 @@ export default function Header({
                   src={logoImgUrl} 
                   alt="Logo" 
                   className="w-full h-full object-contain rounded-lg" 
-                  referrerPolicy="no-referrer" 
+                  referrerPolicy="no-referrer"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
                 />
               ) : (
                 <Shield className="w-8 h-8 lg:w-11 lg:h-11 text-[#990000]" />
